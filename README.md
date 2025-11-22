@@ -26,3 +26,13 @@
 - package arrow pour gérer les .parquet
 - dplyr pour faire un workflow lazy (execution seulement quand on le demande et directement sur disque)
 - Shiny pour faire de l'interractif
+
+## Project Set-up
+
+### Linux
+- Run `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh` to download MiniConda installer
+- Run `bash Miniconda3-latest-Linux-x86_64.sh`
+- Follow installer instructions
+- run `conda env create -f environment.yml` to create environment
+- run `conda activate shiny-visualisation` to load the environment
+- run `R -e "shiny::runApp('./')"` to run the App

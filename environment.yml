@@ -1,0 +1,10 @@
+name: shiny-visualisation
+channels:
+  - conda-forge
+dependencies:
+  - r-base
+  - r-shiny
+  - r-dplyr
+  - r-dbplyr
+  - r-dbi
+  - r-rpostgres
