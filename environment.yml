@@ -8,3 +8,5 @@ dependencies:
   - r-dbplyr
   - r-dbi
   - r-rpostgres
+  - r-leaflet
+  - r-bslib

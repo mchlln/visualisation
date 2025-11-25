@@ -30,9 +30,15 @@
 ## Project Set-up
 
 ### Linux
+
+#### Conda + Shiny App
 - Run `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh` to download MiniConda installer
 - Run `bash Miniconda3-latest-Linux-x86_64.sh`
 - Follow installer instructions
 - run `conda env create -f environment.yml` to create environment
 - run `conda activate shiny-visualisation` to load the environment
 - run `R -e "shiny::runApp('./')"` to run the App
+
+#### Database (docker)
+- run `docker compose up -d` to start the container
+- run `docker compose down -v` to stop and clean container
