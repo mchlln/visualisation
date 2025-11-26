@@ -10,3 +10,4 @@ dependencies:
   - r-rpostgres
   - r-leaflet
   - r-bslib
+  - r-arrow
