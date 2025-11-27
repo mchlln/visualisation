@@ -11,3 +11,5 @@ dependencies:
   - r-leaflet
   - r-bslib
   - r-arrow
+  - r-geosphere
+  - r-sf

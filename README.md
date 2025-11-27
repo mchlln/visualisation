@@ -18,6 +18,7 @@
 - Quel équipement fait le plus grimper le prix de l'immobilier
 - Types d'équipement en fonction de la densité : est-ce qu'à partir d'une certaine densité, on retrouve certains équipements plus proches
 - Quel est le sport le plus accessible selon l'endroit de vie (terrains de foot + présents à la campagne/périphérie, salle de sport en centre ville)
+- Une ville qui dépense plus a des haibtants plus proches de lieux pour la culture ?
 
 ## Technique
 
