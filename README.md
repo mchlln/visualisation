@@ -36,7 +36,9 @@
 - Run `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh` to download MiniConda installer
 - Run `bash Miniconda3-latest-Linux-x86_64.sh`
 - Follow installer instructions
-- run `conda env create -f environment.yml` to create environment
+- Create environment:
+  - For runtime: `conda env create -f environment.yml`
+  - For development: `conda env create -f environment-dev.yml` (r-studio-desktop included)
 - run `conda activate shiny-visualisation` to load the environment
 - run `R -e "shiny::runApp('./')"` to run the App
 
