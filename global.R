@@ -1,16 +1,28 @@
 library(DBI)
 library(RPostgres)
 
+db_host <- Sys.getenv("DB_HOST")
+db_port <- Sys.getenv("DB_PORT")
+db_name <- Sys.getenv("DB_NAME")
+db_user <- Sys.getenv("DB_USER")
+db_password <- Sys.getenv("DB_PASSWORD")
+
 tryCatch({
     conn <- dbConnect(
         RPostgres::Postgres(),
-        dbname = "shiny_db",
-        host = "127.0.0.1",
-        port = 5432,
-        user = "visualisation",
-        password = "visualisation"
+            dbname = Sys.getenv("DB_NAME", "shiny_db"),
+            host = Sys.getenv("DB_HOST", "127.0.0.1"),
+            port = Sys.getenv("DB_PORT", 5432),
+            user = Sys.getenv("DB_USER", "visualisation"),
+            password = Sys.getenv("DB_PASSWORD", "visualisation")
     )
     message("Connected successfully")
+
+    if (db_host != "localhost" || db_host != "127.0.0.1"){
+        message("DB_HOST is not localhost, skipping data load")
+        return()
+    }
+
     is_empty <- function(con, table) {
         tryCatch({
             query <- sprintf("SELECT COUNT(*) AS n FROM %s;", table)
@@ -31,11 +43,6 @@ tryCatch({
         message("Database already loaded, skipping data load")
     }
     
-    res <- dbSendQuery(conn, "SELECT * FROM equipment_access LIMIT 5")
-    dbFetch(res)
-    print(res)
-
-
     #dbDisconnect(conn)
 
 }, error = function(e) {
