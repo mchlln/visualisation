@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: always
+    
+    environment:
+      POSTGRES_USER: visualisation
+      POSTGRES_PASSWORD: visualisation
+      POSTGRES_DB: shiny_db
+      
+    ports:
+      - "5432:5432"
+      
+    volumes:
+      - pg_data:/var/lib/postgresql/data 
+
+volumes:
+  pg_data:
