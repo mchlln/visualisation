@@ -36,6 +36,10 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           Rscript -e 'shinylive::export(appdir = ".", destdir = "docs")'
+<<<<<<< HEAD
+          touch docs/.nojekyll
+=======
+>>>>>>> 9cc55e9a43169d65ceef934676ce21c877d692b2
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
