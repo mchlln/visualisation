@@ -1,6 +1,5 @@
 library(shiny)
 
-<<<<<<< HEAD
 fetchDB <- function(input) {
     north_lat <- input$map_background$north
     south_lat <- input$map_background$south
@@ -62,24 +61,6 @@ dbCoordsToLeaflet <- function(df){
         X = df$X,
         Y = df$Y,
         Label = df$pop
-=======
-server <- function(input, output) {
-
-    res <- dbSendQuery(conn, "SELECT * FROM equipment_access LIMIT 100000")
-    f <- dbFetch(res)
-
-    leaf <- leaflet() %>%
-                addTiles() 
-
-    observeEvent(input$map_background_bounds, {
-        fetchDB(input)
-  })
-
-    data_df_orig <- data.frame(
-        X = f$X,
-        Y = f$Y,
-        Label = f$pop
->>>>>>> 9cc55e9a43169d65ceef934676ce21c877d692b2
     ) %>% distinct()
 
     data_sf_orig <- st_as_sf(
@@ -90,7 +71,6 @@ server <- function(input, output) {
 
     data_sf_4326 <- st_transform(data_sf_orig, 4326)
 
-<<<<<<< HEAD
     return (data_sf_4326)
 
 }
@@ -109,8 +89,6 @@ server <- function(input, output) {
 
     data_sf_4326 <- dbCoordsToLeaflet(f)
     
-=======
->>>>>>> 9cc55e9a43169d65ceef934676ce21c877d692b2
     for (elt2 in seq_len(nrow(data_sf_4326))){
         elt <- data_sf_4326[elt2, ]
 
@@ -134,11 +112,7 @@ server <- function(input, output) {
     }
 
    
-<<<<<<< HEAD
     print("Server update done!")
-=======
-    print("DONE")
->>>>>>> 9cc55e9a43169d65ceef934676ce21c877d692b2
     
     
     output$map_background <- renderLeaflet({leaf})
