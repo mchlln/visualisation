@@ -35,7 +35,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          Rscript -e 'shinylive::export(appdir = ".", destdir = "docs")'
+          Rscript -e 'shinylive::export(appdir = "src", destdir = "docs")'
           touch docs/.nojekyll
           
       - name: Deploy to GitHub Pages
