@@ -21,8 +21,10 @@ fetchDB <- function(input) {
     x_max <- max(coords_3035[, 1])
     y_min <- min(coords_3035[, 2])
     y_max <- max(coords_3035[, 2])
+    
+    max_fetch <- input$slider
 
-    res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT 100000", x_min, x_max, y_min, y_max))
+    res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", x_min, x_max, y_min, y_max, max_fetch))
     f <- dbFetch(res)
 
     if (nrow(f) == 0){
