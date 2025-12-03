@@ -75,10 +75,30 @@ dbCoordsToLeaflet <- function(df){
 
 }
 
+findSquare<- function( output){
+  point <- data.frame(X=4205400, Y=2119200)
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" = %.0f AND \"Y\" = %.0f AND \"typeeq_id\" LIKE 'A%%' ", point$X, point$Y))
+  f <- dbFetch(res)
+  output$distPlot <- renderPlot({
+    
+   h <- hist(f$duree, col = "#007bc2", border = "white",
+       xlab = "Duration of travel from the square to an equipment (in minutes)",
+       ylab = "Number of equipments",
+       main = "Histogram of travel time to an equipment",
+       xaxt = "n",
+       yaxt = "n")
+  axis(1, at = seq(0, max(f$duree)+20, by = 20))
+  axis(2, at = seq(0,max(h$counts)+5, by = 5))
+  })
+  m <- mean(f$duree)
+  print(m)
+}
+
 server <- function(input, output) {
 
     res <- dbSendQuery(conn, "SELECT * FROM equipment_access LIMIT 10")
     f <- dbFetch(res)
+    print(f)
 
     leaf <- leaflet() %>%
                 addTiles() 
@@ -110,6 +130,7 @@ server <- function(input, output) {
         )
 
     }
+    findSquare(output)
 
    
     print("Server update done!")
