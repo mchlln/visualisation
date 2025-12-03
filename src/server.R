@@ -22,7 +22,7 @@ fetchDB <- function(input) {
     y_min <- min(coords_3035[, 2])
     y_max <- max(coords_3035[, 2])
 
-    res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT 10000", x_min, x_max, y_min, y_max))
+    res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT 100000", x_min, x_max, y_min, y_max))
     f <- dbFetch(res)
 
     if (nrow(f) == 0){
@@ -48,11 +48,64 @@ fetchDB <- function(input) {
         lat1=topLeftPoint[2],
         lng2=bottomRightPoint[1],
         lat2=bottomRightPoint[2],
-        color="green"
+        color="green",
+        label = elt$Label
         )
 
     }
-    
+}
+
+selectSquare <- function(input){
+  click_pos <-input$map_background_click
+  
+  df <- data.frame(click_pos$lng, click_pos$lat)
+  colnames(df) <- c("X", "Y")
+  
+  data_sf_orig <- st_as_sf(
+    df,
+    coords = c("X", "Y"),
+    crs = 4326
+  )
+  
+  data_sf_3035 <- st_transform(data_sf_orig, 3035)
+  
+  coords_3035 <- st_coordinates(data_sf_3035)
+  
+  x<-coords_3035[1, 1]
+  y<-coords_3035[1, 2]
+  
+  x_range_min <- x - 100
+  x_range_max <- x + 100
+  y_range_min <- y - 100
+  y_range_max <- y + 100
+  
+  query <- sprintf("
+  SELECT *, 
+         SQRT(POW(\"X\" - %.0f, 2) + POW(\"Y\" - %.0f, 2)) AS calculated_distance
+  FROM equipment_access
+  WHERE \"X\" BETWEEN %.0f AND %.0f AND \"Y\" BETWEEN %.0f AND %.0f
+  ORDER BY calculated_distance ASC
+  LIMIT 1", 
+  x, y, x_range_min, x_range_max, y_range_min, y_range_max)
+  
+  
+
+  res <- dbSendQuery(conn, query)
+  nearest_point <- dbFetch(res)
+  
+  if (nrow(nearest_point) == 0){
+    print("No data for given area")
+    leafletProxy("map_background") %>% clearMarkers()
+    return ()
+  }
+  
+  # TODO: after merge call find square to link plots to user selection
+  
+  data_sf_4326 <- dbCoordsToLeaflet(nearest_point)
+  leafletProxy("map_background") %>% clearMarkers() %>% addMarkers(
+    lng = st_coordinates(data_sf_4326)[1,1],
+    lat = st_coordinates(data_sf_4326)[1,2],
+  )
 }
 
 
@@ -86,6 +139,12 @@ server <- function(input, output) {
     observeEvent(input$map_background_bounds, {
         fetchDB(input)
     })
+    
+    observeEvent(input$map_background_click, {
+      selectSquare(input)
+    })
+    
+    
 
     data_sf_4326 <- dbCoordsToLeaflet(f)
     
