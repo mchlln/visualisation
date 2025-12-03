@@ -75,9 +75,14 @@ dbCoordsToLeaflet <- function(df){
 
 }
 
-findSquare<- function( output){
-  point <- data.frame(X=4205400, Y=2119200)
-  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" = %.0f AND \"Y\" = %.0f AND \"typeeq_id\" LIKE 'A%%' ", point$X, point$Y))
+findSquare<- function(point,input, output){
+  eq <- input$selectEquimpent
+  if(eq == "."){
+    eq <- ""
+  }
+  equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" = %.0f AND \"Y\" = %.0f AND \"typeeq_id\" LIKE %s",
+                                   point$X, point$Y, equipment_type))
   f <- dbFetch(res)
   output$distPlot <- renderPlot({
     
@@ -90,8 +95,6 @@ findSquare<- function( output){
   axis(1, at = seq(0, max(f$duree)+20, by = 20))
   axis(2, at = seq(0,max(h$counts)+5, by = 5))
   })
-  m <- mean(f$duree)
-  print(m)
 }
 
 server <- function(input, output) {
@@ -130,7 +133,10 @@ server <- function(input, output) {
         )
 
     }
-    findSquare(output)
+    observeEvent(input$selectEquimpent, {
+      findSquare(data.frame(X=4205400, Y=2119200), input, output)
+    })
+
 
    
     print("Server update done!")
