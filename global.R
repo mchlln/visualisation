@@ -18,10 +18,7 @@ tryCatch({
     )
     message("Connected successfully")
 
-    if (db_host != "localhost" || db_host != "127.0.0.1"){
-        message("DB_HOST is not localhost, skipping data load")
-        return()
-    }
+    
 
     is_empty <- function(con, table) {
         tryCatch({
@@ -42,6 +39,9 @@ tryCatch({
     }else{
         message("Database already loaded, skipping data load")
     }
+    
+    legend <- read.csv(file = "data/BPE24_table_passage.csv", sep = ";", header = T)
+    print(legend)
     
     #dbDisconnect(conn)
 

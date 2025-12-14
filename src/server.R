@@ -57,7 +57,7 @@ fetchDB <- function(input) {
     }
 }
 
-selectSquare <- function(input){
+selectSquare <- function(input, plot_data_rv, selected_point_rv, table_data_rv){
   click_pos <-input$map_background_click
   
   df <- data.frame(click_pos$lng, click_pos$lat)
@@ -101,8 +101,15 @@ selectSquare <- function(input){
     return ()
   }
   
-  # TODO: after merge call find square to link plots to user selection
+  selected_point_rv(nearest_point)
   
+  query <- sprintf("SELECT * FROM equipment_access WHERE \"X\" = %.0f AND \"Y\" = %.0f ORDER BY distance ASC", nearest_point$X, nearest_point$Y)
+  res <- dbSendQuery(conn, query)
+  tableData <- dbFetch(res)
+  table_data_rv(tableData)
+  
+  # TODO: after merge call find square to link plots to user selection
+  findSquare(data.frame(X=nearest_point$X, Y=nearest_point$Y), input, plot_data_rv)
   data_sf_4326 <- dbCoordsToLeaflet(nearest_point)
   leafletProxy("map_background") %>% clearMarkers() %>% addMarkers(
     lng = st_coordinates(data_sf_4326)[1,1],
@@ -130,29 +137,34 @@ dbCoordsToLeaflet <- function(df){
 
 }
 
-findSquare<- function(point,input, output){
+findSquare<- function(point, input, plot_data_rv){
   eq <- input$selectEquimpent
   if(eq == "."){
     eq <- ""
   }
   equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
+  
+  if(is.null(point) || nrow(point) == 0) {
+    plot_data_rv(data.frame())
+    return()
+  }
+
   res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" = %.0f AND \"Y\" = %.0f AND \"typeeq_id\" LIKE %s",
                                    point$X, point$Y, equipment_type))
-  f <- dbFetch(res)
-  output$distPlot <- renderPlot({
-    
-   h <- hist(f$duree, col = "#007bc2", border = "white",
-       xlab = "Duration of travel from the square to an equipment (in minutes)",
-       ylab = "Number of equipments",
-       main = "Histogram of travel time to an equipment",
-       xaxt = "n",
-       yaxt = "n")
-  axis(1, at = seq(0, max(f$duree)+20, by = 20))
-  axis(2, at = seq(0,max(h$counts)+5, by = 5))
-  })
+  plot_data_rv(dbFetch(res))
+  dbClearResult(res)
 }
 
 server <- function(input, output) {
+
+    plot_data <- reactiveVal(data.frame())
+    table_data <- reactiveVal(data.frame())
+    selected_point <- reactiveVal(NULL)
+
+    observeEvent(input$map_background_click, {
+      selectSquare(input, plot_data, selected_point, table_data)
+    })
+
 
     res <- dbSendQuery(conn, "SELECT * FROM equipment_access LIMIT 10")
     f <- dbFetch(res)
@@ -164,11 +176,6 @@ server <- function(input, output) {
     observeEvent(input$map_background_bounds, {
         fetchDB(input)
     })
-    
-    observeEvent(input$map_background_click, {
-      selectSquare(input)
-    })
-    
     
 
     data_sf_4326 <- dbCoordsToLeaflet(f)
@@ -195,13 +202,36 @@ server <- function(input, output) {
 
     }
     observeEvent(input$selectEquimpent, {
-      findSquare(data.frame(X=4205400, Y=2119200), input, output)
+       if (!is.null(selected_point())) {
+         findSquare(selected_point(), input, plot_data)
+       }
+    })
+    
+    output$table <- renderTable({
+      d <- plot_data()
+      req(nrow(d) > 0)
+      d_ordered <- d[order(d$duree), ]
+      code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
+      d_ordered$signification <- sapply(d_ordered$typeeq_id, function(x) code_signification[match(x, names(code_signification))])
+      d_ordered[,c(15,5,7)]
     })
 
+    output$distPlot <- renderPlot({
+      f <- plot_data()
+      req(nrow(f) > 0)
+      
+      h <- hist(f$duree, col = "#007bc2", border = "white",
+                xlab = "Duration of travel from the square to an equipment (in minutes)",
+                ylab = "Number of equipments",
+                main = "Histogram of travel time to an equipment",
+                xaxt = "n",
+                yaxt = "n")
+      axis(1, at = seq(0, max(f$duree, na.rm = TRUE)+20, by = 20))
+      axis(2, at = seq(0,max(h$counts)+5, by = 5))
+    })
 
    
     print("Server update done!")
-    
     
     output$map_background <- renderLeaflet({leaf})
 
