@@ -4,6 +4,7 @@
 
 - [Jeu de donnée: data.gouv](https://www.data.gouv.fr/datasets/donnees-sur-la-localisation-et-lacces-de-la-population-aux-equipements/)
 - [Légende des équipements utilisés](https://www.insee.fr/fr/metadonnees/source/operation/s2216/presentation)
+- [Légende des équipements utilisés (CSV)](https://www.insee.fr/fr/metadonnees/source/fichier/BPE24_table_passage.csv)
 - [Données sur les dépenses culturelles](https://www.data.gouv.fr/datasets/depenses-culturelles-des-communes/)
 - [Données sur les dépenses en santé](https://www.data.gouv.fr/datasets/open-damir-base-complete-sur-les-depenses-dassurance-maladie-interregimes)
 
