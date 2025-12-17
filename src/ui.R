@@ -33,6 +33,10 @@ ui <- page_sidebar(
             )
         )
       ),
+      nav_panel(
+        title = "Accès à la culture",
+        card()
+      ),
     nav_panel(
       title = "About",
       card(

@@ -155,6 +155,27 @@ findSquare<- function(point, input, plot_data_rv){
   dbClearResult(res)
 }
 
+# Creates a list containing the number of inhabitants in all cities present in the culture dataset
+getNbInhabitant<- function(input){
+  query<- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
+  cities <-dbFetch(query)
+  dbClearResult(query)
+  inhabitantsFrance<- data.frame(City=culture$Code_Insee,Inhabitants=culture$Population.2023,BudgetPerInhabitant=culture$Depenses_culturelles_investissement..K..)
+  inhabitantsDataset <- inhabitantsFrance[inhabitantsFrance$City %in% cities$depcom,]
+  return (inhabitantsDataset)
+}
+
+computeDistToCulture<- function(input){
+  infoCity<- getNbInhabitant(input)
+  city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
+  city_list_sql <- sprintf("(%s)", city_list)
+  query<- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'",city_list_sql))
+  res <- dbFetch(query)
+  dbClearResult(query)
+  print(res)
+}
+
+
 server <- function(input, output) {
 
     plot_data <- reactiveVal(data.frame())
@@ -234,5 +255,7 @@ server <- function(input, output) {
     print("Server update done!")
     
     output$map_background <- renderLeaflet({leaf})
-
+    
+getNbInhabitant()
+computeDistToCulture()
 }
