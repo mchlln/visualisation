@@ -35,7 +35,9 @@ ui <- page_sidebar(
       ),
       nav_panel(
         title = "Accès à la culture",
-        card()
+        card(
+          plotOutput(outputId= "culturalBudgetPerInhabitantToCloseEqPlot")
+        )
       ),
     nav_panel(
       title = "About",

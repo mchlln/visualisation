@@ -155,17 +155,18 @@ findSquare<- function(point, input, plot_data_rv){
   dbClearResult(res)
 }
 
-# Creates a list containing the number of inhabitants in all cities present in the culture dataset
+# Creates a list containing the number of inhabitants and bugdet per inhabitant in all cities present in the culture dataset
 getNbInhabitant<- function(input){
   query<- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
   cities <-dbFetch(query)
   dbClearResult(query)
-  inhabitantsFrance<- data.frame(City=culture$Code_Insee,Inhabitants=culture$Population.2023,BudgetPerInhabitant=culture$Depenses_culturelles_investissement..K..)
+  inhabitantsFrance<- data.frame(City=culture$Code_Insee,Inhabitants=culture$Population.2023,BudgetPerInhabitant=culture$Depenses_culturelles_totales.euros.par.habitant)
   inhabitantsDataset <- inhabitantsFrance[inhabitantsFrance$City %in% cities$depcom,]
   return (inhabitantsDataset)
 }
 
-computeDistToCulture<- function(input){
+#Create a dataset containing the mean distance and time to a cultural equimpment from each city present in getNbInhabitant
+computeDistTimeToCulture<- function(input){
   infoCity<- getNbInhabitant(input)
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
@@ -180,7 +181,8 @@ computeDistToCulture<- function(input){
                        FUN = mean)
 
   totalInfo <- merge(res_agg, infoCity, by = "City")
-  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant")
+  totalInfo$is_close <- as.integer(totalInfo$mean_time < 10)
+  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant", "is_close")
 
   return(totalInfo)
  
@@ -261,6 +263,24 @@ server <- function(input, output) {
       axis(1, at = seq(0, max(f$duree, na.rm = TRUE)+20, by = 20))
       axis(2, at = seq(0,max(h$counts)+5, by = 5))
     })
+    
+    output$culturalBudgetPerInhabitantToCloseEqPlot <- renderPlot({
+      culturalData<- computeDistTimeToCulture(input)
+      req(nrow(culturalData)>0)
+    
+      city_data <- aggregate(list(is_close = culturalData$is_close), 
+                             by = list(City = culturalData$City), 
+                             FUN = sum)
+      
+      city_budget <- unique(culturalData[, c("City", "budget_per_inhabitant")])
+      
+      plot_culture <- merge(city_data, city_budget, by = "City")
+      plot(x=plot_culture$budget_per_inhabitant, y=plot_culture$is_close,
+           xlab = "Budget par Habitant",
+           ylab = "Nombre de type d'équipement à moins de 10 min",
+           main = "Budget Alloué à la Culture vs. Accès à un equipement culturel",
+           pch = 19, col = "#007bc2")
+    })
 
    
     print("Server update done!")
@@ -268,5 +288,5 @@ server <- function(input, output) {
     output$map_background <- renderLeaflet({leaf})
     
 getNbInhabitant()
-computeDistToCulture()
+computeDistTimeToCulture()
 }
