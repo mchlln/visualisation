@@ -170,9 +170,20 @@ computeDistToCulture<- function(input){
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
   query<- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'",city_list_sql))
-  res <- dbFetch(query)
+  dataCitites <- dbFetch(query)
   dbClearResult(query)
-  print(res)
+
+  if (nrow(dataCitites) == 0) return(data.frame())
+
+  res_agg <- aggregate(list(mean_distance = dataCitites$distance, mean_time = dataCitites$duree), 
+                       by = list(City = dataCitites$depcom, eq_culture = dataCitites$typeeq_id), 
+                       FUN = mean)
+
+  totalInfo <- merge(res_agg, infoCity, by = "City")
+  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant")
+
+  return(totalInfo)
+ 
 }
 
 
