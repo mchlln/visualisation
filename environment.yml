@@ -13,3 +13,4 @@ dependencies:
   - r-arrow
   - r-geosphere
   - r-sf
+  - r-shinyWidgets
