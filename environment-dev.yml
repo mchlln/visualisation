@@ -14,3 +14,4 @@ dependencies:
   - r-geosphere
   - r-sf
   - rstudio-desktop
+  - r-shinyWidgets
