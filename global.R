@@ -46,6 +46,9 @@ tryCatch(
         }
 
         legend <- read.csv(file = "data/BPE24_table_passage.csv", sep = ";", header = T)
+
+        culture <- read.csv(file = "data/depenses-culturelles-des-communes-total-2023-2023.csv", sep = ",", header = T)
+        # print(culture)
         # print(legend)
 
         # dbDisconnect(conn)

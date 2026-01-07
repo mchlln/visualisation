@@ -90,6 +90,20 @@ ui <- page_sidebar(
       )
     ),
     nav_panel(
+      title = "Accès à la culture",
+      # we don't see a correlation, not shown in the app but in the presentation
+      # card(
+      #  plotOutput(outputId= "culturalBudgetToCloseEqPlot")
+      # ),
+      # card(
+      #  plotOutput(outputId= "culturalBudgetPerInhabitantToCloseEqPlot")
+      # ),
+      card(
+        # select box to choose an equipment to display
+        plotOutput(outputId = "distToCulturalEQPerInhabitantPlot")
+      )
+    ),
+    nav_panel(
       title = "About",
       card(
         card_header("Information"),

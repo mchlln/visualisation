@@ -47,3 +47,6 @@
 #### Database (docker)
 - run `docker compose up -d` to start the container
 - run `docker compose down -v` to stop and clean container
+
+#### Test remote
+- ssh `ssh -L 8080:localhost:8080 formation`

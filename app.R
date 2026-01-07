@@ -1,3 +1,4 @@
+# install.packages("shiny", repos = "http://cran.us.r-project.org", dependencies = TRUE)
 library(shiny)
 library(leaflet)
 library(bslib)
