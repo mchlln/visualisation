@@ -15,20 +15,20 @@ ui <- page_sidebar(
   title = "Visualisation 2025",
   sidebar = sidebar(
     position = "left",
-    sliderInput("slider", label = "Max number of areas to show", min = 1000, max = 500000, value = 10000),
+    sliderInput("slider", label = "Nombre maximum de carrés à afficher", min = 1000, max = 500000, value = 10000),
   ),
   navset_card_underline(
     nav_panel(
-      title = "General view",
+      title = "Vue Générale",
       layout_columns(
         card(
-          card_header("Map of Equipment Access"),
+          card_header("Carte d'accès aux équipements"),
           leafletOutput("map_background"),
         ),
         card(
-          card_header("Travel Time Distribution"),
+          card_header("Distribution du temps de trajet"),
           selectInput("selectEquimpent",
-            label = "Select Equipment category",
+            label = "Sélectionner une Catégorie",
             choices = list(
               "GLOBAL" = ".",
               "SERVICES POUR LES PARTICULIERS " = "A",
@@ -47,13 +47,13 @@ ui <- page_sidebar(
       )
     ),
     nav_panel(
-      title = "Heatmap",
+      title = "Carte de Chaleur",
       layout_columns(
         leafletOutput("color_map"),
         card(
           selectizeInput(
             inputId = "selectedEquipementColorMap",
-            label = "Select an equipement",
+            label = "Sélectionner un équipement",
             choices = setNames(legend$TYPEQU, legend$Libelle_TYPEQU),
             selected = NULL,
             multiple = FALSE,
@@ -61,7 +61,7 @@ ui <- page_sidebar(
           ),
           noUiSliderInput(
             inputId = "colorMapScale",
-            label = "Select:",
+            label = "Sélectionner:",
             min = 0,
             max = 150,
             value = c(10, 20, 50, 100, 125),
@@ -77,12 +77,12 @@ ui <- page_sidebar(
             col_widths = c(1, 1),
             actionButton(
               inputId = "cancel",
-              label = "reset",
+              label = "Réinitialiser",
               width = "30%"
             ),
             actionButton(
               inputId = "test",
-              label = "Update Color Pallet",
+              label = "Mettre à jour les couleurs",
               width = "75%"
             )
           )
@@ -104,12 +104,13 @@ ui <- page_sidebar(
       )
     ),
     nav_panel(
-      title = "About",
+      title = "À propos",
       card(
         card_header("Information"),
-        p("This General view tab displays equipment access and travel time distributions across various regions."),
-        p("Other tabs containing different visualisations will be added later"),
-        p("On the sidebar, you can choose to display more squares")
+        p("L'onglet vue générale permet de visualiser l'accès aux équipements en cliquant sur un carré de la carte"),
+        p("La Carte de chaleur permet de voir la distance à un équipement donné sur chaque carré. Cela permet ed voir la répartition des équipements sur le territoire."),
+        p("L'onglet d'accès à la culture permet de visualiser la distance aux différents équipements culturels selon la taille des villes. On se base sur toutes les données chargées dans la base de données."),
+        p("La barre latérale permet de choisir le ,nombre de carrés à afficher, plus le nombre est important, plus le temps de chargement est élevé. ")
       )
     )
   )
