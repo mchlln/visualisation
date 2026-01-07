@@ -50,6 +50,7 @@ tryCatch(
         culture <- read.csv(file = "data/depenses-culturelles-des-communes-total-2023-2023.csv", sep = ",", header = T)
         # print(culture)
         # print(legend)
+        towns <- read.csv(file="data/MDB-INSEE-V2.csv",sep = ",", header = T)
 
         # dbDisconnect(conn)
     },
