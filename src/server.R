@@ -226,6 +226,35 @@ computeTimeToCultureForPopSize <- function(input) {
   return(result)
 }
 
+createPlotCloseEqToBudget <- function(input, column){
+  culturalData <- computeDistTimeToCulture(input)
+    req(nrow(culturalData) > 0)
+  
+    city_data <- aggregate(list(is_close = culturalData$is_close),
+      by = list(City = culturalData$City),
+      FUN = sum
+    )
+  
+    city_budget <- unique(culturalData[, c("City", column)])
+    print(city_budget)
+  
+    plot_culture <- merge(city_data, city_budget, by = "City")
+    print(plot_culture)
+    if(column == "budget_per_inhabitant"){
+      lab = "Budget par Habitant"
+    }else{
+      lab = "Budget Global"
+    }
+    print("plotculture$column")
+    print(plot_culture[,3])
+    return (plot(
+      x = plot_culture[,3], y = plot_culture$is_close,
+      xlab = lab,
+      ylab = "Nombre de type d'équipement à moins de 10 min",
+      main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
+      pch = 19, col = "#007bc2"
+    ))
+}
 
 server <- function(input, output) {
   plot_data <- reactiveVal(data.frame())
@@ -324,26 +353,13 @@ server <- function(input, output) {
     axis(2, at = seq(0, max(h$counts) + 5, by = 5))
   })
 
-  # output$culturalBudgetPerInhabitantToCloseEqPlot <- renderPlot({
-  #  culturalData <- computeDistTimeToCulture(input)
-  #  req(nrow(culturalData) > 0)
-  #
-  #  city_data <- aggregate(list(is_close = culturalData$is_close),
-  #    by = list(City = culturalData$City),
-  #    FUN = sum
-  #  )
-  #
-  #  city_budget <- unique(culturalData[, c("City", "budget_per_inhabitant")])
-  #
-  #  plot_culture <- merge(city_data, city_budget, by = "City")
-  #  plot(
-  #    x = plot_culture$budget_per_inhabitant, y = plot_culture$is_close,
-  #    xlab = "Budget par Habitant",
-  #    ylab = "Nombre de type d'équipement à moins de 10 min",
-  #    main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
-  #    pch = 19, col = "#007bc2"
-  #  )
-  # })
+ # output$culturalBudgetToCloseEqPlot <- renderPlot({
+  #  createPlotCloseEqToBudget(input, "global_budget")
+  #})
+  
+   #output$culturalBudgetPerInhabitantToCloseEqPlot <- renderPlot({
+    # createPlotCloseEqToBudget(input, "budget_per_inhabitant")
+  #})
 
   output$distToCulturalEQPerInhabitantPlot <- renderPlot({
     data <- computeTimeToCultureForPopSize(input)
@@ -351,7 +367,7 @@ server <- function(input, output) {
 
     # Get unique equipment types and assign colors
     equipment_types <- unique(data$eq_culture)
-    colors <- rainbow(length(equipment_types))
+    colors <- terrain.colors(length(equipment_types))
     equipment_colors <- setNames(colors, equipment_types)
 
     # Get equipment labels from legend
