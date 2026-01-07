@@ -7,6 +7,7 @@
 - [Légende des équipements utilisés (CSV)](https://www.insee.fr/fr/metadonnees/source/fichier/BPE24_table_passage.csv)
 - [Données sur les dépenses culturelles](https://www.data.gouv.fr/datasets/depenses-culturelles-des-communes/)
 - [Données sur les dépenses en santé](https://www.data.gouv.fr/datasets/open-damir-base-complete-sur-les-depenses-dassurance-maladie-interregimes)
+- [Données sur les communes](https://www.data.gouv.fr/datasets/data-insee-sur-les-communes)
 
 ## Idées:
 
