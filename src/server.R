@@ -165,18 +165,23 @@ findSquare <- function(point, input, plot_data_rv) {
 }
 
 # Creates a list containing the number of inhabitants and bugdet per inhabitant in all cities present in the culture dataset
-getNbInhabitant <- function(input) {
+getNbInhabitant <- function(input,inCultureDataset) {
   query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
   cities <- dbFetch(query)
   dbClearResult(query)
-  inhabitantsFrance <- data.frame(City = culture$Code_Insee, Inhabitants = culture$Population.2023, BudgetPerInhabitant = culture$Depenses_culturelles_totales.euros.par.habitant, GlobalBudget = culture$Depenses_culturelles_totales..K..)
+  if(inCultureDataset == TRUE){
+    inhabitantsFrance <- data.frame(City = culture$Code_Insee, Inhabitants = culture$Population.2023, BudgetPerInhabitant = culture$Depenses_culturelles_totales.euros.par.habitant, GlobalBudget = culture$Depenses_culturelles_totales..K..)
+  }else{
+    inhabitantsFrance <- data.frame(City = towns$CODGEO, Inhabitants = towns$Population)
+  }
+  
   inhabitantsDataset <- inhabitantsFrance[inhabitantsFrance$City %in% cities$depcom, ]
   return(inhabitantsDataset)
 }
 
 # Create a dataset containing the mean distance and time to a cultural equimpment from each city present in getNbInhabitant
-computeDistTimeToCulture <- function(input) {
-  infoCity <- getNbInhabitant(input)
+computeDistTimeToCulture <- function(input,inCultureDataset) {
+  infoCity <- getNbInhabitant(input,inCultureDataset)
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
   query <- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'", city_list_sql))
@@ -194,13 +199,18 @@ computeDistTimeToCulture <- function(input) {
 
   totalInfo <- merge(res_agg, infoCity, by = "City")
   totalInfo$is_close <- as.integer(totalInfo$mean_time < 10)
-  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant", "global_budget", "is_close")
+  if(inCultureDataset == TRUE){
+    colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant", "global_budget", "is_close")
+  }else{
+    colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "is_close")
+  }
+
   return(totalInfo)
 }
 
 # Create a dataset containing the mean distance to an equipment depending on the size of the population of a city
-computeTimeToCultureForPopSize <- function(input) {
-  timeToCulture <- computeDistTimeToCulture(input)
+computeTimeToCultureForPopSize <- function(input,inCultureDataset ) {
+timeToCulture <- computeDistTimeToCulture(input,inCultureDataset)
 
   if (nrow(timeToCulture) == 0) {
     return(data.frame())
@@ -227,37 +237,37 @@ computeTimeToCultureForPopSize <- function(input) {
 }
 
 createPlotCloseEqToBudget <- function(input, column){
-  culturalData <- computeDistTimeToCulture(input)
-    req(nrow(culturalData) > 0)
-  
-    city_data <- aggregate(list(is_close = culturalData$is_close),
-      by = list(City = culturalData$City),
-      FUN = sum
-    )
-  
-    city_budget <- unique(culturalData[, c("City", column)])
-    print(city_budget)
-  
-    plot_culture <- merge(city_data, city_budget, by = "City")
-    print(plot_culture)
-    if(column == "budget_per_inhabitant"){
-      lab = "Budget par Habitant"
-    }else{
-      lab = "Budget Global"
-    }
-    print("plotculture$column")
-    print(plot_culture[,3])
-    return (plot(
-      x = plot_culture[,3], y = plot_culture$is_close,
-      xlab = lab,
-      ylab = "Nombre de type d'équipement à moins de 10 min",
-      main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
-      pch = 19, col = "#007bc2"
-    ))
+  culturalData <- computeDistTimeToCulture(input, TRUE)
+  req(nrow(culturalData) > 0)
+
+  city_data <- aggregate(list(is_close = culturalData$is_close),
+    by = list(City = culturalData$City),
+    FUN = sum
+  )
+
+  city_budget <- unique(culturalData[, c("City", column)])
+  print(city_budget)
+
+  plot_culture <- merge(city_data, city_budget, by = "City")
+  print(plot_culture)
+  if(column == "budget_per_inhabitant"){
+    lab = "Budget par Habitant"
+  }else{
+    lab = "Budget Global"
+  }
+  print("plotculture$column")
+  print(plot_culture[,3])
+  return (plot(
+    x = plot_culture[,3], y = plot_culture$is_close,
+    xlab = lab,
+    ylab = "Nombre de type d'équipement à moins de 10 min",
+    main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
+    pch = 19, col = "#007bc2"
+  ))
 }
 
 createBarplotCulturalEq <- function(input){
-    data <- computeTimeToCultureForPopSize(input)
+    data <- computeTimeToCultureForPopSize(input, FALSE)
     req(nrow(data) > 0)
 
     # Get unique equipment types and assign colors
