@@ -160,7 +160,7 @@ getNbInhabitant<- function(input){
   query<- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
   cities <-dbFetch(query)
   dbClearResult(query)
-  inhabitantsFrance<- data.frame(City=culture$Code_Insee,Inhabitants=culture$Population.2023,BudgetPerInhabitant=culture$Depenses_culturelles_totales.euros.par.habitant)
+  inhabitantsFrance<- data.frame(City=culture$Code_Insee,Inhabitants=culture$Population.2023,BudgetPerInhabitant=culture$Depenses_culturelles_totales.euros.par.habitant, GlobalBudget=culture$Depenses_culturelles_totales..K..)
   inhabitantsDataset <- inhabitantsFrance[inhabitantsFrance$City %in% cities$depcom,]
   return (inhabitantsDataset)
 }
@@ -182,10 +182,31 @@ computeDistTimeToCulture<- function(input){
 
   totalInfo <- merge(res_agg, infoCity, by = "City")
   totalInfo$is_close <- as.integer(totalInfo$mean_time < 10)
-  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant", "is_close")
-
+  colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant","global_budget", "is_close")
   return(totalInfo)
  
+}
+
+# Create a dataset containing the mean distance to an equipment depending on the size of the population of a city
+computeTimeToCultureForPopSize <- function(input){
+  timeToCulture <- computeDistTimeToCulture(input)
+  
+  if (nrow(timeToCulture) == 0) return(data.frame())
+
+  popSize_labels <- c("1-99", "100-999", "1000-9999", "10000-99999", "100000+")
+  
+  timeToCulture$pop_size_category <- cut(timeToCulture$population, 
+                                          breaks = c(0, 99, 999, 9999, 99999, Inf),
+                                          labels = popSize_labels,
+                                          right = TRUE)
+
+  # Aggregate mean time by both population size category and equipment type
+  result <- aggregate(list(mean_time = timeToCulture$mean_time), 
+                      by = list(pop_size_category = timeToCulture$pop_size_category,
+                                eq_culture = timeToCulture$eq_culture), 
+                      FUN = mean)
+  
+  return(result)
 }
 
 
@@ -278,8 +299,69 @@ server <- function(input, output) {
       plot(x=plot_culture$budget_per_inhabitant, y=plot_culture$is_close,
            xlab = "Budget par Habitant",
            ylab = "Nombre de type d'équipement à moins de 10 min",
-           main = "Budget Alloué à la Culture vs. Accès à un equipement culturel",
+           main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
            pch = 19, col = "#007bc2")
+    })
+    output$culturalBudgetToCloseEqPlot <- renderPlot({
+      culturalData<- computeDistTimeToCulture(input)
+      req(nrow(culturalData)>0)
+    
+      city_data <- aggregate(list(is_close = culturalData$is_close), 
+                             by = list(City = culturalData$City), 
+                             FUN = sum)
+      
+      city_budget <- unique(culturalData[, c("City", "global_budget")])
+      
+      plot_culture <- merge(city_data, city_budget, by = "City")
+      plot(x=plot_culture$global_budget, y=plot_culture$is_close,
+           xlab = "Budget Global",
+           ylab = "Nombre de type d'équipement à moins de 10 min",
+           main = "Budget Global Alloué à la Culture vs. Accès à un équipement culturel",
+           pch = 19, col = "#007bc2",log="x")
+    })
+    
+    output$distToCulturalEQPerInhabitantPlot <- renderPlot({
+      data <- computeTimeToCultureForPopSize(input)
+      req(nrow(data)>0)
+      
+      # Get unique equipment types and assign colors
+      equipment_types <- unique(data$eq_culture)
+      colors <- rainbow(length(equipment_types))
+      equipment_colors <- setNames(colors, equipment_types)
+      
+      # Get equipment labels from legend
+      code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
+      
+      # Convert data to wide format for grouped barplot
+      plot_data <- data
+      plot_data$eq_label <- sapply(plot_data$eq_culture, 
+                                    function(x) code_signification[match(x, names(code_signification))])
+      
+      # Create matrix for barplot
+      pop_categories <- unique(plot_data$pop_size_category)
+      barplot_matrix <- matrix(NA, nrow = length(equipment_types), ncol = length(pop_categories))
+      rownames(barplot_matrix) <- sapply(equipment_types, function(x) code_signification[match(x, names(code_signification))])
+      colnames(barplot_matrix) <- pop_categories
+      
+      for (i in seq_along(equipment_types)) {
+        for (j in seq_along(pop_categories)) {
+          subset_data <- plot_data[plot_data$eq_culture == equipment_types[i] & 
+                                   plot_data$pop_size_category == pop_categories[j], ]
+          if (nrow(subset_data) > 0) {
+            barplot_matrix[i, j] <- subset_data$mean_time[1]
+          }
+        }
+      }
+      
+      # Create grouped barplot
+      barplot(barplot_matrix, 
+              beside = TRUE,
+              col = colors,
+              xlab = "Population",
+              ylab = "Temps moyen de trajet (en minutes)",
+              main = "Temps de trajet moyen vers un équipement culturel en fonction de la taille de la population",
+              legend.text = rownames(barplot_matrix),
+              args.legend = list(x = "topright"))
     })
 
    
