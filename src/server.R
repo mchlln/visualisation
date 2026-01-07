@@ -400,9 +400,9 @@ server <- function(input, output) {
 
     h <- hist(f$duree,
       col = "#007bc2", border = "white",
-      xlab = "Duration of travel from the square to an equipment (in minutes)",
-      ylab = "Number of equipments",
-      main = "Histogram of travel time to an equipment",
+      xlab = "Durée de déplacement d'un carré vers un équipement (en minutes)",
+      ylab = "Nombre d'équipements",
+      main = "Histogramme de la durée de trajet vers un équipement",
       xaxt = "n",
       yaxt = "n"
     )
