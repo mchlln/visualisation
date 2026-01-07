@@ -59,7 +59,6 @@ ui <- page_sidebar(
             multiple = FALSE,
             options = NULL
           ),
-          switchInput(inputId = "i2", value = TRUE, "Use default color pallet", width = "100%", inline = T, size = "large"),
           noUiSliderInput(
             inputId = "colorMapScale",
             label = "Select:",
