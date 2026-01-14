@@ -47,7 +47,7 @@ ui <- page_sidebar(
       )
     ),
     nav_panel(
-      title = "Carte de Chaleur",
+      title = "Distance aux équipements",
       layout_columns(
         leafletOutput("color_map"),
         card(
