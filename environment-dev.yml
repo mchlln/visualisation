@@ -16,3 +16,4 @@ dependencies:
   - rstudio-desktop
   - r-shinyWidgets
   - r-leafgl
+  - duckdb-cli
