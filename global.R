@@ -34,16 +34,7 @@ tryCatch(
             )
         }
 
-        if (is_empty(conn, "equipment_access")) {
-            message("Reading Parquet file...")
-            df <- read_parquet("data/donnees-2024-reg94.parquet")
-            df_data_frame <- as.data.frame(df)
-            message("Writing to Database...")
-            dbWriteTable(conn, "equipment_access", df_data_frame, overwrite = TRUE, row.names = FALSE)
-            message("Success! Data loaded.")
-        } else {
-            message("Database already loaded, skipping data load")
-        }
+        stopifnot(!is_empty(conn, "equipment_access"))
 
         legend <- read.csv(file = "data/BPE24_table_passage.csv", sep = ";", header = T)
 

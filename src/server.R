@@ -1,11 +1,43 @@
 library(shiny)
+library(leafgl)
+library(sf)
+library(geosphere)
+
+create_rect_polys <- function(sf_points) {
+  coords <- st_coordinates(sf_points)
+  if (nrow(coords) == 0) {
+    return(NULL)
+  }
+
+  d <- sqrt(2) * 100
+  tl <- destPoint(coords, 315, d)
+  br <- destPoint(coords, 135, d)
+
+  lng1 <- tl[, 1]
+  lat1 <- tl[, 2]
+  lng2 <- br[, 1]
+  lat2 <- br[, 2]
+
+  polys <- lapply(seq_len(nrow(coords)), function(i) {
+    st_polygon(list(matrix(c(
+      lng1[i], lat1[i],
+      lng2[i], lat1[i],
+      lng2[i], lat2[i],
+      lng1[i], lat2[i],
+      lng1[i], lat1[i]
+    ), ncol = 2, byrow = TRUE)))
+  })
+
+  st_sfc(polys, crs = 4326)
+}
 
 fetchDB <- function(input) {
   north_lat <- input$map_background$north
   south_lat <- input$map_background$south
   leafletProxy("map_background") %>%
     clearMarkers() %>%
-    clearShapes()
+    clearShapes() %>%
+    clearGlLayers()
 
   df <- data.frame(c(input$map_background_bounds$west, input$map_background_bounds$east), c(input$map_background_bounds$north, input$map_background_bounds$south))
   colnames(df) <- c("X", "Y")
@@ -41,24 +73,19 @@ fetchDB <- function(input) {
 
 
   incProgress(0.3, detail = "Rendering Map")
-  for (elt2 in seq_len(nrow(data_sf_4326))) {
-    elt <- data_sf_4326[elt2, ]
 
-    # leafletProxy("map_background") %>% addMarkers(
-    # lng = st_coordinates(elt)[,1],
-    # lat = st_coordinates(elt)[,2],
-    # label = elt$Label
-    # )
-    bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
-    topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
-    leafletProxy("map_background") %>% addRectangles(
-      lng1 = topLeftPoint[1],
-      lat1 = topLeftPoint[2],
-      lng2 = bottomRightPoint[1],
-      lat2 = bottomRightPoint[2],
-      color = "green",
-      label = elt$Label
-    )
+  polys_sfc <- create_rect_polys(data_sf_4326)
+  if (!is.null(polys_sfc)) {
+    polys_sf <- st_sf(geometry = polys_sfc)
+    polys_sf$Label <- data_sf_4326$Label
+
+    leafletProxy("map_background") %>%
+      addGlPolygons(
+        data = polys_sf,
+        color = "green",
+        popup = "Label",
+        fillOpacity = 0.2,
+      )
   }
 }
 
@@ -408,7 +435,8 @@ fetchDBColor <- function(input) {
   south_lat <- input$color_map$south
   leafletProxy("color_map") %>%
     clearMarkers() %>%
-    clearShapes()
+    clearShapes() %>%
+    clearGlLayers()
 
   df <- data.frame(c(input$color_map_bounds$west, input$color_map_bounds$east), c(input$color_map_bounds$north, input$color_map_bounds$south))
   colnames(df) <- c("X", "Y")
@@ -453,43 +481,34 @@ fetchDBColor <- function(input) {
 
 
   incProgress(0.3, detail = "Rendering Map")
-  for (elt2 in seq_len(nrow(data_sf_4326))) {
-    elt <- data_sf_4326[elt2, ]
 
-    # leafletProxy("color_map") %>% addMarkers(
-    # lng = st_coordinates(elt)[,1],
-    # lat = st_coordinates(elt)[,2],
-    # label = elt$Label
-    # )
-    color <- "black"
-    if (!is.null(elt$Label)) {
+  polys_sfc <- create_rect_polys(data_sf_4326)
+
+  if (!is.null(polys_sfc)) {
+    polys_sf <- st_sf(geometry = polys_sfc)
+    polys_sf$Label <- data_sf_4326$Label
+
+    color_vec <- rep("black", nrow(data_sf_4326))
+    if (!is.null(data_sf_4326$Label)) {
+      vals <- data_sf_4326$Label
       scale <- input$colorMapScale
-      if (elt$Label < scale[5]) {
-        color <- "purple"
-      }
-      if (elt$Label < scale[4]) {
-        color <- "red"
-      }
-      if (elt$Label < scale[3]) {
-        color <- "orange"
-      }
-      if (elt$Label < scale[2]) {
-        color <- "yellow"
-      }
-      if (elt$Label < scale[1]) {
-        color <- "green"
-      }
-    }
 
-    bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
-    topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
-    leafletProxy("color_map") %>% addRectangles(
-      lng1 = topLeftPoint[1],
-      lat1 = topLeftPoint[2],
-      lng2 = bottomRightPoint[1],
-      lat2 = bottomRightPoint[2],
-      color = color,
-      label = elt$Label
-    )
+      # Vectorized replacement for cascading ifs
+      color_vec[vals < scale[5]] <- "purple"
+      color_vec[vals < scale[4]] <- "red"
+      color_vec[vals < scale[3]] <- "orange"
+      color_vec[vals < scale[2]] <- "yellow"
+      color_vec[vals < scale[1]] <- "green"
+    }
+    polys_sf$color_col <- color_vec
+
+    leafletProxy("color_map") %>%
+      addGlPolygons(
+        data = polys_sf,
+        fillColor = "color_col",
+        fillOpacity = 0.2,
+        stroke = FALSE,
+        popup = "Label"
+      )
   }
 }
