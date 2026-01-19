@@ -192,23 +192,23 @@ findSquare <- function(point, input, plot_data_rv) {
 }
 
 # Creates a list containing the number of inhabitants and bugdet per inhabitant in all cities present in the culture dataset
-getNbInhabitant <- function(input,inCultureDataset) {
+getNbInhabitant <- function(input, inCultureDataset) {
   query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
   cities <- dbFetch(query)
   dbClearResult(query)
-  if(inCultureDataset == TRUE){
+  if (inCultureDataset == TRUE) {
     inhabitantsFrance <- data.frame(City = culture$Code_Insee, Inhabitants = culture$Population.2023, BudgetPerInhabitant = culture$Depenses_culturelles_totales.euros.par.habitant, GlobalBudget = culture$Depenses_culturelles_totales..K..)
-  }else{
+  } else {
     inhabitantsFrance <- data.frame(City = towns$CODGEO, Inhabitants = towns$Population)
   }
-  
+
   inhabitantsDataset <- inhabitantsFrance[inhabitantsFrance$City %in% cities$depcom, ]
   return(inhabitantsDataset)
 }
 
 # Create a dataset containing the mean distance and time to a cultural equimpment from each city present in getNbInhabitant
-computeDistTimeToCulture <- function(input,inCultureDataset) {
-  infoCity <- getNbInhabitant(input,inCultureDataset)
+computeDistTimeToCulture <- function(input, inCultureDataset) {
+  infoCity <- getNbInhabitant(input, inCultureDataset)
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
   query <- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'", city_list_sql))
@@ -226,9 +226,9 @@ computeDistTimeToCulture <- function(input,inCultureDataset) {
 
   totalInfo <- merge(res_agg, infoCity, by = "City")
   totalInfo$is_close <- as.integer(totalInfo$mean_time < 10)
-  if(inCultureDataset == TRUE){
+  if (inCultureDataset == TRUE) {
     colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "budget_per_inhabitant", "global_budget", "is_close")
-  }else{
+  } else {
     colnames(totalInfo) <- c("City", "eq_culture", "mean_distance", "mean_time", "population", "is_close")
   }
 
@@ -236,8 +236,8 @@ computeDistTimeToCulture <- function(input,inCultureDataset) {
 }
 
 # Create a dataset containing the mean distance to an equipment depending on the size of the population of a city
-computeTimeToCultureForPopSize <- function(input,inCultureDataset ) {
-timeToCulture <- computeDistTimeToCulture(input,inCultureDataset)
+computeTimeToCultureForPopSize <- function(input, inCultureDataset) {
+  timeToCulture <- computeDistTimeToCulture(input, inCultureDataset)
 
   if (nrow(timeToCulture) == 0) {
     return(data.frame())
@@ -263,7 +263,7 @@ timeToCulture <- computeDistTimeToCulture(input,inCultureDataset)
   return(result)
 }
 
-createPlotCloseEqToBudget <- function(input, column){
+createPlotCloseEqToBudget <- function(input, column) {
   culturalData <- computeDistTimeToCulture(input, TRUE)
   req(nrow(culturalData) > 0)
 
@@ -277,15 +277,15 @@ createPlotCloseEqToBudget <- function(input, column){
 
   plot_culture <- merge(city_data, city_budget, by = "City")
   print(plot_culture)
-  if(column == "budget_per_inhabitant"){
-    lab = "Budget par Habitant"
-  }else{
-    lab = "Budget Global"
+  if (column == "budget_per_inhabitant") {
+    lab <- "Budget par Habitant"
+  } else {
+    lab <- "Budget Global"
   }
   print("plotculture$column")
-  print(plot_culture[,3])
-  return (plot(
-    x = plot_culture[,3], y = plot_culture$is_close,
+  print(plot_culture[, 3])
+  return(plot(
+    x = plot_culture[, 3], y = plot_culture$is_close,
     xlab = lab,
     ylab = "Nombre de type d'équipement à moins de 10 min",
     main = "Budget Par Habitant Alloué à la Culture vs. Accès à un équipement culturel",
@@ -293,51 +293,51 @@ createPlotCloseEqToBudget <- function(input, column){
   ))
 }
 
-createBarplotCulturalEq <- function(input){
-    data <- computeTimeToCultureForPopSize(input, FALSE)
-    req(nrow(data) > 0)
+createBarplotCulturalEq <- function(input) {
+  data <- computeTimeToCultureForPopSize(input, FALSE)
+  req(nrow(data) > 0)
 
-    # Get unique equipment types and assign colors
-    equipment_types <- unique(data$eq_culture)
-    colors <- terrain.colors(length(equipment_types))
-    equipment_colors <- setNames(colors, equipment_types)
+  # Get unique equipment types and assign colors
+  equipment_types <- unique(data$eq_culture)
+  colors <- terrain.colors(length(equipment_types))
+  equipment_colors <- setNames(colors, equipment_types)
 
-    # Get equipment labels from legend
-    code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
+  # Get equipment labels from legend
+  code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
 
-    # Convert data to wide format for grouped barplot
-    plot_data <- data
-    plot_data$eq_label <- sapply(
-      plot_data$eq_culture,
-      function(x) code_signification[match(x, names(code_signification))]
-    )
+  # Convert data to wide format for grouped barplot
+  plot_data <- data
+  plot_data$eq_label <- sapply(
+    plot_data$eq_culture,
+    function(x) code_signification[match(x, names(code_signification))]
+  )
 
-    # Create matrix for barplot
-    pop_categories <- unique(plot_data$pop_size_category)
-    barplot_matrix <- matrix(NA, nrow = length(equipment_types), ncol = length(pop_categories))
-    rownames(barplot_matrix) <- sapply(equipment_types, function(x) code_signification[match(x, names(code_signification))])
-    colnames(barplot_matrix) <- pop_categories
+  # Create matrix for barplot
+  pop_categories <- unique(plot_data$pop_size_category)
+  barplot_matrix <- matrix(NA, nrow = length(equipment_types), ncol = length(pop_categories))
+  rownames(barplot_matrix) <- sapply(equipment_types, function(x) code_signification[match(x, names(code_signification))])
+  colnames(barplot_matrix) <- pop_categories
 
-    for (i in seq_along(equipment_types)) {
-      for (j in seq_along(pop_categories)) {
-        subset_data <- plot_data[plot_data$eq_culture == equipment_types[i] &
-          plot_data$pop_size_category == pop_categories[j], ]
-        if (nrow(subset_data) > 0) {
-          barplot_matrix[i, j] <- subset_data$mean_time[1]
-        }
+  for (i in seq_along(equipment_types)) {
+    for (j in seq_along(pop_categories)) {
+      subset_data <- plot_data[plot_data$eq_culture == equipment_types[i] &
+        plot_data$pop_size_category == pop_categories[j], ]
+      if (nrow(subset_data) > 0) {
+        barplot_matrix[i, j] <- subset_data$mean_time[1]
       }
     }
+  }
 
-    # Create grouped barplot
-    return (barplot(barplot_matrix,
-      beside = TRUE,
-      col = colors,
-      xlab = "Population",
-      ylab = "Temps moyen de trajet (en minutes)",
-      main = "Temps de trajet moyen vers un équipement culturel en fonction de la taille de la population",
-      legend.text = rownames(barplot_matrix),
-      args.legend = list(x = "topright"))
-    )
+  # Create grouped barplot
+  return(barplot(barplot_matrix,
+    beside = TRUE,
+    col = colors,
+    xlab = "Population",
+    ylab = "Temps moyen de trajet (en minutes)",
+    main = "Temps de trajet moyen vers un équipement culturel en fonction de la taille de la population",
+    legend.text = rownames(barplot_matrix),
+    args.legend = list(x = "topright")
+  ))
 }
 
 server <- function(input, output) {
@@ -358,15 +358,19 @@ server <- function(input, output) {
     addTiles()
 
   observeEvent(input$map_background_bounds, {
-    withProgress(message = "Loading data...", value = 0, {
-      fetchDB(input)
-    })
+    if (input$auto_refresh1) {
+      withProgress(message = "Loading data...", value = 0, {
+        fetchDB(input)
+      })
+    }
   })
 
   observeEvent(input$color_map_bounds, {
-    withProgress(message = "Loading heatmap...", value = 0, {
-      fetchDBColor(input)
-    })
+    if (input$auto_refresh2) {
+      withProgress(message = "Loading heatmap...", value = 0, {
+        fetchDBColor(input)
+      })
+    }
   })
 
   data_sf_4326 <- dbCoordsToLeaflet(f)
@@ -374,35 +378,35 @@ server <- function(input, output) {
   color_map <- leaflet() %>%
     addTiles()
 
-  for (elt2 in seq_len(nrow(data_sf_4326))) {
-    elt <- data_sf_4326[elt2, ]
-
-    leaf <- addMarkers(
-      map = leaf,
-      lng = st_coordinates(elt)[, 1],
-      lat = st_coordinates(elt)[, 2],
-      label = elt$Label
-    )
-    bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
-    topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
-    leaf <- addRectangles(
-      map = leaf,
-      lng1 = topLeftPoint[1],
-      lat1 = topLeftPoint[2],
-      lng2 = bottomRightPoint[1],
-      lat2 = bottomRightPoint[2],
-      color = "green"
-    )
-
-    color_map <- addRectangles(
-      map = color_map,
-      lng1 = topLeftPoint[1],
-      lat1 = topLeftPoint[2],
-      lng2 = bottomRightPoint[1],
-      lat2 = bottomRightPoint[2],
-      color = "blue"
-    )
-  }
+  # for (elt2 in seq_len(nrow(data_sf_4326))) {
+  #  elt <- data_sf_4326[elt2, ]
+  #
+  #  leaf <- addMarkers(
+  #    map = leaf,
+  #    lng = st_coordinates(elt)[, 1],
+  #    lat = st_coordinates(elt)[, 2],
+  #    label = elt$Label
+  #  )
+  #  bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
+  #  topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
+  #  leaf <- addRectangles(
+  #    map = leaf,
+  #    lng1 = topLeftPoint[1],
+  #    lat1 = topLeftPoint[2],
+  #    lng2 = bottomRightPoint[1],
+  #    lat2 = bottomRightPoint[2],
+  #    color = "green"
+  #  )
+  #
+  #  color_map <- addRectangles(
+  #    map = color_map,
+  #    lng1 = topLeftPoint[1],
+  #    lat1 = topLeftPoint[2],
+  #    lng2 = bottomRightPoint[1],
+  #    lat2 = bottomRightPoint[2],
+  #    color = "blue"
+  #  )
+  # }
   observeEvent(input$selectEquimpent, {
     if (!is.null(selected_point())) {
       findSquare(selected_point(), input, plot_data)
@@ -437,13 +441,13 @@ server <- function(input, output) {
     axis(2, at = seq(0, max(h$counts) + 5, by = 5))
   })
 
- # output$culturalBudgetToCloseEqPlot <- renderPlot({
+  # output$culturalBudgetToCloseEqPlot <- renderPlot({
   #  createPlotCloseEqToBudget(input, "global_budget")
-  #})
-  
-   #output$culturalBudgetPerInhabitantToCloseEqPlot <- renderPlot({
-    # createPlotCloseEqToBudget(input, "budget_per_inhabitant")
-  #})
+  # })
+
+  # output$culturalBudgetPerInhabitantToCloseEqPlot <- renderPlot({
+  # createPlotCloseEqToBudget(input, "budget_per_inhabitant")
+  # })
 
   output$distToCulturalEQPerInhabitantPlot <- renderPlot({
     createBarplotCulturalEq(input)
