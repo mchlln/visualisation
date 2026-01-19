@@ -42,11 +42,34 @@
   - For runtime: `conda env create -f environment.yml`
   - For development: `conda env create -f environment-dev.yml` (r-studio-desktop included)
 - run `conda activate shiny-visualisation` to load the environment
-- run `R -e "shiny::runApp('./')"` to run the App
+- run `R -e "shiny::runApp('./', port=8080)"` to run the App
 
 #### Database (docker)
 - run `docker compose up -d` to start the container
 - run `docker compose down -v` to stop and clean container
 
-#### Test remote
-- ssh `ssh -L 8080:localhost:8080 formation`
+#### Running with remote
+- setup a remote host with SSH
+- ssh `ssh -L 8080:localhost:8080 <ssh_host>`
+
+#### Add data
+- run `duckdb`
+- initialize with (only once):
+``` Bash
+INSTALL postgres;
+LOAD postgres;
+
+ATTACH 'dbname=shiny_db user=visualisation password=visualisation host=localhost' AS db (TYPE POSTGRES);
+
+CREATE TABLE db.equipment_access(X INTEGER, Y INTEGER, typeeq_id TEXT, distance FLOAT, deuclidienne FLOAT, duree FLOAT, depcom TEXT, pop INTEGER);
+```
+
+- add data:
+```
+INSERT INTO db.equipment_access 
+SELECT X,Y,typeeq_id, distance, deuclidienne, duree, depcom, pop FROM 'data/your_data_path.parquet';
+```
+
+### Errors
+
+- `DB ERROR: !is_empty(conn, "equipment_access") n'est pas TRUE`: You can't launch app with empty database.

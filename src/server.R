@@ -2,6 +2,7 @@ library(shiny)
 library(leafgl)
 library(sf)
 library(geosphere)
+source("./src/map_utils.R")
 
 create_rect_polys <- function(sf_points) {
   coords <- st_coordinates(sf_points)
@@ -31,35 +32,13 @@ create_rect_polys <- function(sf_points) {
   st_sfc(polys, crs = 4326)
 }
 
-fetchDB <- function(input) {
-  north_lat <- input$map_background$north
-  south_lat <- input$map_background$south
-  leafletProxy("map_background") %>%
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearGlLayers()
+updateMap <- function(input) {
 
-  df <- data.frame(c(input$map_background_bounds$west, input$map_background_bounds$east), c(input$map_background_bounds$north, input$map_background_bounds$south))
-  colnames(df) <- c("X", "Y")
-
-  data_sf_orig <- st_as_sf(
-    df,
-    coords = c("X", "Y"),
-    crs = 4326
-  )
-
-  data_sf_3035 <- st_transform(data_sf_orig, 3035)
-
-  coords_3035 <- st_coordinates(data_sf_3035)
-  x_min <- min(coords_3035[, 1])
-  x_max <- max(coords_3035[, 1])
-  y_min <- min(coords_3035[, 2])
-  y_max <- max(coords_3035[, 2])
-
+  bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
   max_fetch <- input$slider
 
   incProgress(0.2, detail = "Querying Database")
-  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", x_min, x_max, y_min, y_max, max_fetch))
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], max_fetch))
 
   incProgress(0.4, detail = "Processing Data")
   f <- dbFetch(res)
@@ -360,7 +339,7 @@ server <- function(input, output) {
   observeEvent(input$map_background_bounds, {
     if (input$auto_refresh1) {
       withProgress(message = "Loading data...", value = 0, {
-        fetchDB(input)
+        updateMap(input)
       })
     }
   })
@@ -368,7 +347,7 @@ server <- function(input, output) {
   observeEvent(input$color_map_bounds, {
     if (input$auto_refresh2) {
       withProgress(message = "Loading heatmap...", value = 0, {
-        fetchDBColor(input)
+        updateColorMap(input)
       })
     }
   })
@@ -422,7 +401,7 @@ server <- function(input, output) {
     d_ordered <- d[order(d$duree), ]
     code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
     d_ordered$signification <- sapply(d_ordered$typeeq_id, function(x) code_signification[match(x, names(code_signification))])
-    d_ordered[, c(15, 5, 7)]
+    d_ordered[, c(9, 4, 6)]
   })
 
   output$distPlot <- renderPlot({
@@ -464,31 +443,9 @@ server <- function(input, output) {
 }
 
 
-fetchDBColor <- function(input) {
-  north_lat <- input$color_map$north
-  south_lat <- input$color_map$south
-  leafletProxy("color_map") %>%
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearGlLayers()
+updateColorMap <- function(input) {
 
-  df <- data.frame(c(input$color_map_bounds$west, input$color_map_bounds$east), c(input$color_map_bounds$north, input$color_map_bounds$south))
-  colnames(df) <- c("X", "Y")
-
-  data_sf_orig <- st_as_sf(
-    df,
-    coords = c("X", "Y"),
-    crs = 4326
-  )
-
-  data_sf_3035 <- st_transform(data_sf_orig, 3035)
-
-  coords_3035 <- st_coordinates(data_sf_3035)
-  x_min <- min(coords_3035[, 1])
-  x_max <- max(coords_3035[, 1])
-  y_min <- min(coords_3035[, 2])
-  y_max <- max(coords_3035[, 2])
-
+  bounds <- extractBoundsCoords(input$color_map, "color_map", input$color_map_bounds)
   max_fetch <- input$slider
 
   eq <- input$selectedEquipementColorMap
@@ -499,7 +456,7 @@ fetchDBColor <- function(input) {
   equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
 
   incProgress(0.2, detail = "Querying Database")
-  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", x_min, x_max, y_min, y_max, equipment_type, max_fetch))
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], equipment_type, max_fetch))
 
   incProgress(0.4, detail = "Processing Data")
   f <- dbFetch(res)
@@ -527,7 +484,6 @@ fetchDBColor <- function(input) {
       vals <- data_sf_4326$Label
       scale <- input$colorMapScale
 
-      # Vectorized replacement for cascading ifs
       color_vec[vals < scale[5]] <- "purple"
       color_vec[vals < scale[4]] <- "red"
       color_vec[vals < scale[3]] <- "orange"
