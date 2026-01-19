@@ -319,7 +319,7 @@ createBarplotCulturalEq <- function(input) {
   ))
 }
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   plot_data <- reactiveVal(data.frame())
   table_data <- reactiveVal(data.frame())
   selected_point <- reactiveVal(NULL)
@@ -336,8 +336,19 @@ server <- function(input, output) {
   leaf <- leaflet() %>%
     addTiles()
 
+  observeEvent(input$auto_refresh, {
+    withProgress(message = "WOOORK", value = 0, {
+      #if (input$auto_refresh) {
+      #withProgress(message = "Loading data...", value = 0, {
+      #  updateMap(input)
+      #  updateColorMap(input)
+      #  })
+      #}
+    })
+  })
+
   observeEvent(input$map_background_bounds, {
-    if (input$auto_refresh1) {
+    if (input$auto_refresh) {
       withProgress(message = "Loading data...", value = 0, {
         updateMap(input)
       })
@@ -345,7 +356,7 @@ server <- function(input, output) {
   })
 
   observeEvent(input$color_map_bounds, {
-    if (input$auto_refresh2) {
+    if (input$auto_refresh) {
       withProgress(message = "Loading heatmap...", value = 0, {
         updateColorMap(input)
       })
@@ -418,6 +429,8 @@ server <- function(input, output) {
     )
     axis(1, at = seq(0, max(f$duree, na.rm = TRUE) + 20, by = 20))
     axis(2, at = seq(0, max(h$counts) + 5, by = 5))
+  }, height = function() {
+    session$clientData$output_distPlot_width * 0.75
   })
 
   # output$culturalBudgetToCloseEqPlot <- renderPlot({

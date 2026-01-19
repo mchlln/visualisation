@@ -10,14 +10,55 @@ ui <- page_sidebar(
       #colorMapScale .noUi-connects .noUi-connect:nth-child(4) { background: red; }
       #colorMapScale .noUi-connects .noUi-connect:nth-child(5) { background: purple; }
       #colorMapScale .noUi-connects .noUi-connect:nth-child(6) { background: black; }
+    ")),
+    tags$script(HTML("
+      var originalGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function(type, attributes) {
+        if (type === 'webgl' || type === 'experimental-webgl' || type === 'webgl2') {
+          attributes = attributes || {};
+          attributes.preserveDrawingBuffer = true;
+        }
+        return originalGetContext.call(this, type, attributes);
+      };
+    ")),
+    tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+    tags$script(HTML("
+      $(document).on('click', '#save_btn', function() {
+        var mapLoc = document.getElementById('color_map');
+        html2canvas(mapLoc, {
+          useCORS: true,
+          allowTaint: true,
+          ignoreElements: function(element) {
+            return element.classList.contains('leaflet-control-zoom');
+          }
+        }).then(function(canvas) {
+          var link = document.createElement('a');
+          document.body.appendChild(link);
+          link.download = 'color_map.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          document.body.removeChild(link);
+        });
+      });
+      $(document).on('click', '#open_dist_plot', function() {
+        var img = $('#distPlot img');
+        if (img.length > 0) {
+          var src = img.attr('src');
+          var w = window.open(\"\");
+          w.document.write('<img src=\"' + src + '\" style=\"width:100%\"/>');
+          w.document.close();
+        }
+      });
     "))
   ),
   title = "Visualisation 2025",
   sidebar = sidebar(
     position = "left",
     sliderInput("slider", label = "Nombre maximum de carrés à afficher", min = 1000, max = 500000, value = 10000),
-    switchInput(label = "Rafraissement automatique", inputId = "auto_refresh1", value = TRUE),
-    switchInput(label = "Rafraissement automatique", inputId = "auto_refresh2", value = TRUE)
+    textOutput("text"),
+    p("Rafraichissement automatique de la carte"),
+    #switchInput(label = "Rafraichissement automatique de la carte", inputId = "auto_refresh1", value = TRUE),
+    switchInput( inputId = "auto_refresh", value = TRUE)
   ),
   navset_card_underline(
     nav_panel(
@@ -43,8 +84,19 @@ ui <- page_sidebar(
             ),
             selected = "."
           ),
-          plotOutput(outputId = "distPlot"),
-          div(style = "overflow-y: auto; height: 300px;", tableOutput(outputId = "table"))
+          navset_card_underline(
+            nav_panel(
+              title = "Graphique",
+              actionButton("open_dist_plot", "Agrandir", icon = icon("expand"), class = "btn-sm", style = "margin-bottom: 10px;"),
+              plotOutput(outputId = "distPlot"),
+            ),
+            nav_panel(
+              title = "Tableau",
+              div(style = "overflow-y: auto; height: 100%;", tableOutput(outputId = "table"))
+            )
+          ),
+          
+          #
         )
       )
     ),
@@ -80,13 +132,20 @@ ui <- page_sidebar(
             actionButton(
               inputId = "cancel",
               label = "Réinitialiser",
-              width = "30%"
+              width = "100%"
             ),
             actionButton(
               inputId = "test",
               label = "Mettre à jour les couleurs",
-              width = "75%"
+              width = "100%"
             )
+          ),
+          actionButton(
+            inputId = "save_btn",
+            label = "Save Map as PNG",
+            icon = icon("download"),
+            width = "100%",
+            style = "margin-top: 10px; background-color: #007bc2; color: white;"
           )
         ),
       )
