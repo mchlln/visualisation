@@ -375,35 +375,6 @@ server <- function(input, output, session) {
   color_map <- leaflet() %>%
     addTiles()
 
-  # for (elt2 in seq_len(nrow(data_sf_4326))) {
-  #  elt <- data_sf_4326[elt2, ]
-  #
-  #  leaf <- addMarkers(
-  #    map = leaf,
-  #    lng = st_coordinates(elt)[, 1],
-  #    lat = st_coordinates(elt)[, 2],
-  #    label = elt$Label
-  #  )
-  #  bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
-  #  topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
-  #  leaf <- addRectangles(
-  #    map = leaf,
-  #    lng1 = topLeftPoint[1],
-  #    lat1 = topLeftPoint[2],
-  #    lng2 = bottomRightPoint[1],
-  #    lat2 = bottomRightPoint[2],
-  #    color = "green"
-  #  )
-  #
-  #  color_map <- addRectangles(
-  #    map = color_map,
-  #    lng1 = topLeftPoint[1],
-  #    lat1 = topLeftPoint[2],
-  #    lng2 = bottomRightPoint[1],
-  #    lat2 = bottomRightPoint[2],
-  #    color = "blue"
-  #  )
-  # }
   observeEvent(input$selectEquimpent, {
     if (!is.null(selected_point())) {
       findSquare(selected_point(), input, plot_data)
