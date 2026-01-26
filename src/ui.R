@@ -94,6 +94,10 @@ ui <- page_sidebar(
             nav_panel(
               title = "Tableau",
               div(style = "overflow-y: auto; height: 100%;", tableOutput(outputId = "table"))
+            ),
+            nav_panel(
+              title = "Accès à la culture",
+              plotOutput(outputId = "generalStatsPlot")
             )
           ),
           

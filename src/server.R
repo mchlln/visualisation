@@ -172,8 +172,12 @@ findSquare <- function(point, input, plot_data_rv) {
 }
 
 # Creates a list containing the number of inhabitants and bugdet per inhabitant in all cities present in the culture dataset
-getNbInhabitant <- function(input, inCultureDataset) {
-  query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
+getNbInhabitant <- function(input, inCultureDataset, bounds = NULL) {
+  if (!is.null(bounds)) {
+    query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f", bounds[1], bounds[2], bounds[3], bounds[4]))
+  } else {
+    query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
+  }
   cities <- dbFetch(query)
   dbClearResult(query)
   if (inCultureDataset == TRUE) {
@@ -187,8 +191,8 @@ getNbInhabitant <- function(input, inCultureDataset) {
 }
 
 # Create a dataset containing the mean distance and time to a cultural equimpment from each city present in getNbInhabitant
-computeDistTimeToCulture <- function(input, inCultureDataset) {
-  infoCity <- getNbInhabitant(input, inCultureDataset)
+computeDistTimeToCulture <- function(input, inCultureDataset, bounds = NULL) {
+  infoCity <- getNbInhabitant(input, inCultureDataset, bounds)
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
   query <- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'", city_list_sql))
@@ -216,8 +220,8 @@ computeDistTimeToCulture <- function(input, inCultureDataset) {
 }
 
 # Create a dataset containing the mean distance to an equipment depending on the size of the population of a city
-computeTimeToCultureForPopSize <- function(input, inCultureDataset) {
-  timeToCulture <- computeDistTimeToCulture(input, inCultureDataset)
+computeTimeToCultureForPopSize <- function(input, inCultureDataset, bounds = NULL) {
+  timeToCulture <- computeDistTimeToCulture(input, inCultureDataset, bounds)
 
   if (nrow(timeToCulture) == 0) {
     return(data.frame())
@@ -273,8 +277,8 @@ createPlotCloseEqToBudget <- function(input, column) {
   ))
 }
 
-createBarplotCulturalEq <- function(input) {
-  data <- computeTimeToCultureForPopSize(input, FALSE)
+createBarplotCulturalEq <- function(input, bounds = NULL) {
+  data <- computeTimeToCultureForPopSize(input, FALSE, bounds)
   req(nrow(data) > 0)
 
   # Get unique equipment types and assign colors
@@ -421,6 +425,12 @@ server <- function(input, output, session) {
 
   output$distToCulturalEQPerInhabitantPlot <- renderPlot({
     createBarplotCulturalEq(input)
+  })
+
+  output$generalStatsPlot <- renderPlot({
+    req(input$map_background_bounds)
+    bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
+    createBarplotCulturalEq(input, bounds)
   })
 
   print("Server update done!")
