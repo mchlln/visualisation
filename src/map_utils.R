@@ -3,7 +3,8 @@ extractBoundsCoords <- function(map, map_str, map_bounds) {
   south_lat <- map$south
   leafletProxy(map_str) %>%
     clearMarkers() %>%
-    clearShapes()
+    clearShapes() %>%
+    clearGlLayers()
 
   df <- data.frame(c(map_bounds$west, map_bounds$east), c(map_bounds$north, map_bounds$south))
   colnames(df) <- c("X", "Y")

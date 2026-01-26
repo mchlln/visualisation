@@ -61,6 +61,7 @@ ui <- page_sidebar(
     switchInput( inputId = "auto_refresh", value = TRUE)
   ),
   navset_card_underline(
+    id = "main_nav",
     nav_panel(
       title = "Vue Générale",
       layout_columns(

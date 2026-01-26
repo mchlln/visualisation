@@ -34,6 +34,7 @@ create_rect_polys <- function(sf_points) {
 
 updateMap <- function(input) {
 
+  req(input$map_background_bounds)
   bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
   max_fetch <- input$slider
 
@@ -337,17 +338,22 @@ server <- function(input, output, session) {
     addTiles()
 
   observeEvent(input$auto_refresh, {
-    withProgress(message = "WOOORK", value = 0, {
-      #if (input$auto_refresh) {
-      #withProgress(message = "Loading data...", value = 0, {
-      #  updateMap(input)
-      #  updateColorMap(input)
-      #  })
-      #}
-    })
+    req(input$auto_refresh)
+    tab <- input$main_nav
+
+    if (tab == "Vue Générale") {
+      withProgress(message = "Loading data...", value = 0, {
+        updateMap(input)
+      })
+    } else if (tab == "Distance aux équipements") {
+      withProgress(message = "Loading heatmap...", value = 0, {
+        updateColorMap(input)
+      })
+    }
   })
 
   observeEvent(input$map_background_bounds, {
+    leafletProxy("map_background") %>% clearGlLayers()
     if (input$auto_refresh) {
       withProgress(message = "Loading data...", value = 0, {
         updateMap(input)
@@ -356,6 +362,7 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$color_map_bounds, {
+    leafletProxy("color_map") %>% clearGlLayers()
     if (input$auto_refresh) {
       withProgress(message = "Loading heatmap...", value = 0, {
         updateColorMap(input)
@@ -458,6 +465,7 @@ server <- function(input, output, session) {
 
 updateColorMap <- function(input) {
 
+  req(input$color_map_bounds)
   bounds <- extractBoundsCoords(input$color_map, "color_map", input$color_map_bounds)
   max_fetch <- input$slider
 
