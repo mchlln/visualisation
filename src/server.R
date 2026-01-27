@@ -38,7 +38,7 @@ updateMap <- function(input) {
   bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
   max_fetch <- input$slider
 
-  incProgress(0.2, detail = "Requête a la base de données")
+  incProgress(0.2, detail = "Requête à la base de données")
   res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], max_fetch))
 
   incProgress(0.4, detail = "Traitement des données")
@@ -467,7 +467,7 @@ updateColorMap <- function(input) {
   }
   equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
 
-  incProgress(0.2, detail = "Requête a la base de données")
+  incProgress(0.2, detail = "Requête à la base de données")
   res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], equipment_type, max_fetch))
 
   incProgress(0.4, detail = "Traitement des données")
