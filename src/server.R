@@ -38,10 +38,10 @@ updateMap <- function(input) {
   bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
   max_fetch <- input$slider
 
-  incProgress(0.2, detail = "Querying Database")
+  incProgress(0.2, detail = "Requête a la base de données")
   res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], max_fetch))
 
-  incProgress(0.4, detail = "Processing Data")
+  incProgress(0.4, detail = "Traitement des données")
   f <- dbFetch(res)
 
   if (nrow(f) == 0) {
@@ -52,7 +52,7 @@ updateMap <- function(input) {
   data_sf_4326 <- dbCoordsToLeaflet(f)
 
 
-  incProgress(0.3, detail = "Rendering Map")
+  incProgress(0.3, detail = "Rendu de la carte")
 
   polys_sfc <- create_rect_polys(data_sf_4326)
   if (!is.null(polys_sfc)) {
@@ -346,11 +346,21 @@ server <- function(input, output, session) {
     tab <- input$main_nav
 
     if (tab == "Vue Générale") {
-      withProgress(message = "Loading data...", value = 0, {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
         updateMap(input)
       })
     } else if (tab == "Distance aux équipements") {
-      withProgress(message = "Loading heatmap...", value = 0, {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateColorMap(input)
+      })
+    }
+  })
+
+  observeEvent(input$color_update, {
+    req(input$auto_refresh)
+    tab <- input$main_nav
+    if (tab == "Distance aux équipements") {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
         updateColorMap(input)
       })
     }
@@ -359,7 +369,7 @@ server <- function(input, output, session) {
   observeEvent(input$map_background_bounds, {
     leafletProxy("map_background") %>% clearGlLayers()
     if (input$auto_refresh) {
-      withProgress(message = "Loading data...", value = 0, {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
         updateMap(input)
       })
     }
@@ -368,7 +378,7 @@ server <- function(input, output, session) {
   observeEvent(input$color_map_bounds, {
     leafletProxy("color_map") %>% clearGlLayers()
     if (input$auto_refresh) {
-      withProgress(message = "Loading heatmap...", value = 0, {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
         updateColorMap(input)
       })
     }
@@ -457,10 +467,10 @@ updateColorMap <- function(input) {
   }
   equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
 
-  incProgress(0.2, detail = "Querying Database")
+  incProgress(0.2, detail = "Requête a la base de données")
   res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], equipment_type, max_fetch))
 
-  incProgress(0.4, detail = "Processing Data")
+  incProgress(0.4, detail = "Traitement des données")
   f <- dbFetch(res)
 
   if (nrow(f) == 0) {
@@ -473,7 +483,7 @@ updateColorMap <- function(input) {
   data_sf_4326 <- dbCoordsToLeaflet(f)
 
 
-  incProgress(0.3, detail = "Rendering Map")
+  incProgress(0.3, detail = "Rendu de la carte")
 
   polys_sfc <- create_rect_polys(data_sf_4326)
 

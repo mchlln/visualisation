@@ -11,6 +11,7 @@ ui <- page_sidebar(
       #colorMapScale .noUi-connects .noUi-connect:nth-child(5) { background: purple; }
       #colorMapScale .noUi-connects .noUi-connect:nth-child(6) { background: black; }
     ")),
+    # Code Gemini 3 pro (PNG from map)
     tags$script(HTML("
       var originalGetContext = HTMLCanvasElement.prototype.getContext;
       HTMLCanvasElement.prototype.getContext = function(type, attributes) {
@@ -50,6 +51,7 @@ ui <- page_sidebar(
         }
       });
     "))
+    # Fin Code Gemini 3 pro
   ),
   title = "Visualisation 2025",
   sidebar = sidebar(
@@ -135,19 +137,14 @@ ui <- page_sidebar(
           layout_columns(
             col_widths = c(1, 1),
             actionButton(
-              inputId = "cancel",
-              label = "Réinitialiser",
-              width = "100%"
-            ),
-            actionButton(
-              inputId = "test",
+              inputId = "color_update",
               label = "Mettre à jour les couleurs",
               width = "100%"
             )
           ),
           actionButton(
             inputId = "save_btn",
-            label = "Save Map as PNG",
+            label = "Sauvegarder la carte",
             icon = icon("download"),
             width = "100%",
             style = "margin-top: 10px; background-color: #007bc2; color: white;"
@@ -174,7 +171,7 @@ ui <- page_sidebar(
       card(
         card_header("Information"),
         p("L'onglet vue générale permet de visualiser l'accès aux équipements en cliquant sur un carré de la carte"),
-        p("La Carte de chaleur permet de voir la distance à un équipement donné sur chaque carré. Cela permet ed voir la répartition des équipements sur le territoire."),
+        p("La Carte de distance aux équipements permet de voir la distance à un équipement donné sur chaque carré. Cela permet de voir la répartition des équipements sur le territoire."),
         p("L'onglet d'accès à la culture permet de visualiser la distance aux différents équipements culturels selon la taille des villes. On se base sur toutes les données chargées dans la base de données."),
         p("La barre latérale permet de choisir le ,nombre de carrés à afficher, plus le nombre est important, plus le temps de chargement est élevé. ")
       )
