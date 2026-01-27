@@ -1,0 +1,281 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage{listings}
+\usepackage{graphicx}
+
+\graphicspath{{./res/}}
+
+\usepackage[dvipsnames]{xcolor}
+
+\usepackage[style=authortitle,backend=biber]{biblatex}
+
+\definecolor{prec32}{RGB}{230, 240, 255} % Bleu clair pour 32-bit
+\definecolor{prec64}{RGB}{255, 240, 230} % Orange clair pour 64-bit
+
+% Modified command with local padding control
+% Set fboxsep to 0pt to remove all extra padding around the text
+\newcommand{\hlline}[2]{%
+  % We use a zero-width box (\rlap) so it doesn't push the text around
+  \rlap{\color{#1}\rule[-0.35em]{\linewidth}{1.2em}}% 
+  #2% The actual text is printed on top
+}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    language=C,
+    morekeywords={MPI_Send, MPI_Recv, MPI_COMM_WORLD, MPI_DOUBLE, MPI_Init, MPI_Finalize, MPI_Comm_rank, MPI_Comm_size},
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle,
+    breaklines=true,
+    captionpos=b,
+    frame=tb,
+    mathescape=true, % Enables math mode for subscripts and arrows
+    columns=flexible}
+
+\addtobeamertemplate{navigation symbols}{}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+\setbeamercolor{footline}{fg=blue}
+\setbeamerfont{footline}{series=\bfseries}
+\usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{matrix, positioning, arrows.meta}
+
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Sommaire}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\title[]{Données sur la localisation et l’accès de la population aux équipements}
+
+\subtitle{Fouille, Extraction, Visualisation}
+
+\author[Chollon, Jonquière]
+{M. Chollon \and V. Jonquière}
+
+\date[]
+{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+\frametitle{Sommaire}
+\tableofcontents
+\end{frame}
+
+\section{Présentation des Données}
+%contenu, utilisation, origine, traitements, taille des données
+
+\begin{frame}
+\frametitle{Présentation des données}
+\begin{itemize}
+    \item Distance et temps d'accès aux équipements depuis un point donné en France
+    \item Équipements provenant de la BPE Base Permanante des Équipements \footnote{https://www.data.gouv.fr/datasets/base-permanente-des-equipements-1}
+    \item France découpée en carreaux de 200m$x$200m
+    \item Pour chaque carreau :
+    \begin{itemize}
+        \item  + de 200 entrées
+        \item distance à l'équipement le plus proche
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Source des données}
+\begin{itemize}
+    \item Données INSEE \footnote{https://www.data.gouv.fr/datasets/donnees-sur-la-localisation-et-lacces-de-la-population-aux-equipements}
+    \item Collectées en 2024
+    \item Stockées dans 15Go de fichiers .parquet
+    \item 34Go décompréssés et traités
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Contenu}
+\begin{itemize}
+    \item 14 champs
+    \item idSrc
+    \item Informations sur la localisation: X, Y, iris, dep, reg, depcom, pop
+    \item Informations sur l'équipement : typeeeq\_id, domaine, depcom\_eq
+    \item Métriques de distance : distance, deuclidienne, duree
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Données supplémentaires}
+\begin{itemize}
+    \item Base des équipements Permanents (Légende)
+    \item Dépenses culturelles des communes \footnote{https://www.data.gouv.fr/datasets/depenses-culturelles-des-communes}
+    \item Données INSEE sur les communes \footnote{https://www.data.gouv.fr/datasets/data-insee-sur-les-communes}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Traitement sur les données}
+\begin{itemize}
+    \item 3 bases supplémentaires : chargement à chaque exécution
+    \item Données converties en CSV
+    \item Donnnés équipements : sélection des colonnes importantes
+    \item Utilisation d'une base de données pour garder les données en mémoire
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Contenu}
+\begin{itemize}
+    \item 14 champs, 8 importants
+    \item \textcolor{red}{idSrc}
+    \item Informations sur la localisation: \textcolor{ForestGreen}{X, Y}, \textcolor{red}{iris, dep, reg,} \textcolor{ForestGreen}{depcom, pop}
+    \item Informations sur l'équipement : \textcolor{ForestGreen}{typeeeq\_id,} \textcolor{red}{domaine, depcom\_eq}
+    \item Métriques de distance : \textcolor{ForestGreen}{distance, deuclidienne, duree}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Type de Données}
+\begin{itemize}
+    \item Numériques : X, Y, distance, deuclidienne, duree, pop
+    \item Texte : typeeeq\_id, depcom
+\end{itemize}
+\end{frame}
+
+\section{Problématiques}
+
+\begin{frame}
+\frametitle{Problématiques et Questions}
+\begin{itemize}
+    \item Identifier les zones éloignées d'équipements importants
+    \item Identifier les zones pauvres en un certain type d'équipement
+    \item Observer les tendances en terme d'accès à la culture
+    \item Les communes dépensant le plus d'argent dans la culture ont-elles plus d'équipements culturels proches que les autres ?
+\end{itemize}
+\end{frame}
+
+\section{Présentation de l'application}
+\begin{frame}
+\frametitle{Analyse d'une zone restreinte}
+\begin{figure}
+    \includegraphics[width=\textwidth]{zone_hist.png}
+    \caption{Représentation sous forme d'histogramme de la durée de déplacement vers un équipement pour un carré donné}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Analyse d'une zone restreinte}
+\begin{figure}
+    \includegraphics[width=\textwidth]{zone_tab.png}
+    \caption{Représentation sous forme de tableau de la distance et durée de déplacement vers un équipement pour un carré donné}
+\end{figure}
+\end{frame}
+\begin{frame}
+\frametitle{Analyse d'une zone restreinte}
+\begin{figure}
+    \includegraphics[width=\textwidth]{zone_culture.png}
+    \caption{Représentation de l'accès à la culture pour la zone affichée}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Identifier les zones pauvres en un certain type d'équipement}
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{climbing.png}
+    \caption{Distance en Km vers la salle d'escalade la plus proche}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Identifier les zones éloignées d'équipements importants}
+\begin{figure}
+    \centering
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[width=.9\textwidth]{police_color1.png}
+        \end{column}
+        
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[width=.9\textwidth]{police_color2.png}
+        \end{column}
+    \end{columns}
+    \caption{Distance en Km vers le poste de police le plus proche}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Les communes dépensant le plus d'argent dans la culture ont-elles plus d'équipements culturels proches que les autres ?}
+\begin{figure}
+    \includegraphics[width=\textheight]{budget_global.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Observer les tendances en terme d'accès à la culture}
+\begin{figure}
+    \includegraphics[width=\textheight]{budget_par_habitant.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}
+\frametitle{Accès à la culure selon le nombre d'habitants}
+\begin{figure}
+    \includegraphics[width=\textheight]{culture_global.png}
+\end{figure}
+\end{frame}
+
+\section{Difficultés et limites}
+
+\begin{frame}
+    \frametitle{Difficultés et Limites}
+    \begin{itemize}
+        \item Données trop volumineuses pour être dans une application interactive
+        \item Trop de données pour utiliser le CREMI ou Plafrim
+        \item Système de coordonnées EPSG:3035
+        \item Codes communes, départements et régions basés sur le Code Officiel Géographique
+        \item Données sur les dépenses culturelles sur des villes de + de 3000 habitants
+    \end{itemize}
+\end{frame}
+
+\section{Axes d'amélioration}
+
+\begin{frame}
+    \frametitle{Axes d'amélioration}
+    \begin{itemize}
+        \item Réorganiser les données dans une structure plus classique de BDD relationnelle
+        \item Étendre la visualisation de la culture à d'autres types d'équipements
+        \item Mieux gérer ce qui doit être calculé une seule fois
+        \item Connecter d'autres jeux de données 
+    \end{itemize}
+\end{frame}
+
+\end{document}
