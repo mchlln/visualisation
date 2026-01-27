@@ -30,11 +30,9 @@
 - dplyr pour faire un workflow lazy (execution seulement quand on le demande et directement sur disque)
 - Shiny pour faire de l'interractif
 
-## Project Set-up
+## Project Set-up (Linux)
 
-### Linux
-
-#### Conda + Shiny App
+### Conda + Shiny App
 - Run `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh` to download MiniConda installer
 - Run `bash Miniconda3-latest-Linux-x86_64.sh`
 - Follow installer instructions
@@ -42,11 +40,57 @@
   - For runtime: `conda env create -f environment.yml`
   - For development: `conda env create -f environment-dev.yml` (r-studio-desktop included)
 - run `conda activate shiny-visualisation` to load the environment
-- run `R -e "shiny::runApp('./')"` to run the App
+- run `R -e "shiny::runApp('./', port=8080)"` to run the App (after database initialization)
+
+### Initialize database + data
+
+#### Get data files
+- Go to `https://valentin-jonquiere.emi.u-bordeaux.fr/visu/` and download the files in `data/`
+- Download one or more .parquet file [here](https://www.data.gouv.fr/datasets/donnees-sur-la-localisation-et-lacces-de-la-population-aux-equipements/) and add them to `data/`
 
 #### Database (docker)
 - run `docker compose up -d` to start the container
 - run `docker compose down -v` to stop and clean container
 
-#### Test remote
-- ssh `ssh -L 8080:localhost:8080 formation`
+#### Database
+- Run `duckdb` (in the dev conda environment)
+- Initialize with (only once):
+``` SQL
+INSTALL postgres;
+LOAD postgres;
+
+ATTACH 'dbname=shiny_db user=visualisation password=visualisation host=localhost' AS db (TYPE POSTGRES);
+
+CREATE TABLE db.equipment_access(X INTEGER, Y INTEGER, typeeq_id TEXT, distance FLOAT, deuclidienne FLOAT, duree FLOAT, depcom TEXT, pop INTEGER);
+```
+
+- Add data:
+```SQL
+ATTACH 'dbname=shiny_db user=visualisation password=visualisation host=localhost' AS db (TYPE POSTGRES);
+
+INSERT INTO db.equipment_access 
+SELECT X,Y,typeeq_id, distance, deuclidienne, duree, depcom, pop FROM 'data/your_data_path.parquet';
+```
+
+- Clear database:
+
+```SQL
+ATTACH 'dbname=shiny_db user=visualisation password=visualisation host=localhost' AS db (TYPE POSTGRES);
+
+DELETE FROM db.public.equipment_access WHERE 1=1;
+DROP TABLE db.public.equipment_access;
+```
+
+
+
+### Running with remote
+- setup a remote host with SSH
+- run the project on this machine
+- ssh `ssh -L 8080:localhost:8080 <ssh_host>`
+- go to `localhost:8080` on your computer 
+
+
+
+### Errors
+
+- `DB ERROR: !is_empty(conn, "equipment_access") n'est pas TRUE`: You can't launch app with empty database.

@@ -2,6 +2,7 @@ library(shiny)
 library(leafgl)
 library(sf)
 library(geosphere)
+source("./src/map_utils.R")
 
 create_rect_polys <- function(sf_points) {
   coords <- st_coordinates(sf_points)
@@ -31,37 +32,16 @@ create_rect_polys <- function(sf_points) {
   st_sfc(polys, crs = 4326)
 }
 
-fetchDB <- function(input) {
-  north_lat <- input$map_background$north
-  south_lat <- input$map_background$south
-  leafletProxy("map_background") %>%
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearGlLayers()
+updateMap <- function(input) {
 
-  df <- data.frame(c(input$map_background_bounds$west, input$map_background_bounds$east), c(input$map_background_bounds$north, input$map_background_bounds$south))
-  colnames(df) <- c("X", "Y")
-
-  data_sf_orig <- st_as_sf(
-    df,
-    coords = c("X", "Y"),
-    crs = 4326
-  )
-
-  data_sf_3035 <- st_transform(data_sf_orig, 3035)
-
-  coords_3035 <- st_coordinates(data_sf_3035)
-  x_min <- min(coords_3035[, 1])
-  x_max <- max(coords_3035[, 1])
-  y_min <- min(coords_3035[, 2])
-  y_max <- max(coords_3035[, 2])
-
+  req(input$map_background_bounds)
+  bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
   max_fetch <- input$slider
 
-  incProgress(0.2, detail = "Querying Database")
-  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", x_min, x_max, y_min, y_max, max_fetch))
+  incProgress(0.2, detail = "Requête à la base de données")
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], max_fetch))
 
-  incProgress(0.4, detail = "Processing Data")
+  incProgress(0.4, detail = "Traitement des données")
   f <- dbFetch(res)
 
   if (nrow(f) == 0) {
@@ -72,7 +52,7 @@ fetchDB <- function(input) {
   data_sf_4326 <- dbCoordsToLeaflet(f)
 
 
-  incProgress(0.3, detail = "Rendering Map")
+  incProgress(0.3, detail = "Rendu de la carte")
 
   polys_sfc <- create_rect_polys(data_sf_4326)
   if (!is.null(polys_sfc)) {
@@ -192,8 +172,12 @@ findSquare <- function(point, input, plot_data_rv) {
 }
 
 # Creates a list containing the number of inhabitants and bugdet per inhabitant in all cities present in the culture dataset
-getNbInhabitant <- function(input, inCultureDataset) {
-  query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
+getNbInhabitant <- function(input, inCultureDataset, bounds = NULL) {
+  if (!is.null(bounds)) {
+    query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f", bounds[1], bounds[2], bounds[3], bounds[4]))
+  } else {
+    query <- dbSendQuery(conn, sprintf("SELECT DISTINCT depcom FROM equipment_access"))
+  }
   cities <- dbFetch(query)
   dbClearResult(query)
   if (inCultureDataset == TRUE) {
@@ -207,8 +191,8 @@ getNbInhabitant <- function(input, inCultureDataset) {
 }
 
 # Create a dataset containing the mean distance and time to a cultural equimpment from each city present in getNbInhabitant
-computeDistTimeToCulture <- function(input, inCultureDataset) {
-  infoCity <- getNbInhabitant(input, inCultureDataset)
+computeDistTimeToCulture <- function(input, inCultureDataset, bounds = NULL) {
+  infoCity <- getNbInhabitant(input, inCultureDataset, bounds)
   city_list <- paste0("'", infoCity$City, "'", collapse = ", ")
   city_list_sql <- sprintf("(%s)", city_list)
   query <- dbSendQuery(conn, sprintf("SELECT depcom, typeeq_id, distance, duree FROM equipment_access WHERE depcom IN %s AND typeeq_id LIKE 'F3%%'", city_list_sql))
@@ -236,8 +220,8 @@ computeDistTimeToCulture <- function(input, inCultureDataset) {
 }
 
 # Create a dataset containing the mean distance to an equipment depending on the size of the population of a city
-computeTimeToCultureForPopSize <- function(input, inCultureDataset) {
-  timeToCulture <- computeDistTimeToCulture(input, inCultureDataset)
+computeTimeToCultureForPopSize <- function(input, inCultureDataset, bounds = NULL) {
+  timeToCulture <- computeDistTimeToCulture(input, inCultureDataset, bounds)
 
   if (nrow(timeToCulture) == 0) {
     return(data.frame())
@@ -293,8 +277,8 @@ createPlotCloseEqToBudget <- function(input, column) {
   ))
 }
 
-createBarplotCulturalEq <- function(input) {
-  data <- computeTimeToCultureForPopSize(input, FALSE)
+createBarplotCulturalEq <- function(input, bounds = NULL) {
+  data <- computeTimeToCultureForPopSize(input, FALSE, bounds)
   req(nrow(data) > 0)
 
   # Get unique equipment types and assign colors
@@ -340,7 +324,7 @@ createBarplotCulturalEq <- function(input) {
   ))
 }
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   plot_data <- reactiveVal(data.frame())
   table_data <- reactiveVal(data.frame())
   selected_point <- reactiveVal(NULL)
@@ -357,18 +341,45 @@ server <- function(input, output) {
   leaf <- leaflet() %>%
     addTiles()
 
+  observeEvent(input$auto_refresh, {
+    req(input$auto_refresh)
+    tab <- input$main_nav
+
+    if (tab == "Vue Générale") {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateMap(input)
+      })
+    } else if (tab == "Distance aux équipements") {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateColorMap(input)
+      })
+    }
+  })
+
+  observeEvent(input$color_update, {
+    req(input$auto_refresh)
+    tab <- input$main_nav
+    if (tab == "Distance aux équipements") {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateColorMap(input)
+      })
+    }
+  })
+
   observeEvent(input$map_background_bounds, {
-    if (input$auto_refresh1) {
-      withProgress(message = "Loading data...", value = 0, {
-        fetchDB(input)
+    leafletProxy("map_background") %>% clearGlLayers()
+    if (input$auto_refresh) {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateMap(input)
       })
     }
   })
 
   observeEvent(input$color_map_bounds, {
-    if (input$auto_refresh2) {
-      withProgress(message = "Loading heatmap...", value = 0, {
-        fetchDBColor(input)
+    leafletProxy("color_map") %>% clearGlLayers()
+    if (input$auto_refresh) {
+      withProgress(message = "Rafraîchissement de la carte...", value = 0, {
+        updateColorMap(input)
       })
     }
   })
@@ -378,35 +389,6 @@ server <- function(input, output) {
   color_map <- leaflet() %>%
     addTiles()
 
-  # for (elt2 in seq_len(nrow(data_sf_4326))) {
-  #  elt <- data_sf_4326[elt2, ]
-  #
-  #  leaf <- addMarkers(
-  #    map = leaf,
-  #    lng = st_coordinates(elt)[, 1],
-  #    lat = st_coordinates(elt)[, 2],
-  #    label = elt$Label
-  #  )
-  #  bottomRightPoint <- destPoint(st_coordinates(elt)[1, ], 135, sqrt(2) * 100)
-  #  topLeftPoint <- destPoint(st_coordinates(elt)[1, ], 315, sqrt(2) * 100)
-  #  leaf <- addRectangles(
-  #    map = leaf,
-  #    lng1 = topLeftPoint[1],
-  #    lat1 = topLeftPoint[2],
-  #    lng2 = bottomRightPoint[1],
-  #    lat2 = bottomRightPoint[2],
-  #    color = "green"
-  #  )
-  #
-  #  color_map <- addRectangles(
-  #    map = color_map,
-  #    lng1 = topLeftPoint[1],
-  #    lat1 = topLeftPoint[2],
-  #    lng2 = bottomRightPoint[1],
-  #    lat2 = bottomRightPoint[2],
-  #    color = "blue"
-  #  )
-  # }
   observeEvent(input$selectEquimpent, {
     if (!is.null(selected_point())) {
       findSquare(selected_point(), input, plot_data)
@@ -422,7 +404,7 @@ server <- function(input, output) {
     d_ordered <- d[order(d$duree), ]
     code_signification <- setNames(legend$Libelle_TYPEQU, legend$TYPEQU)
     d_ordered$signification <- sapply(d_ordered$typeeq_id, function(x) code_signification[match(x, names(code_signification))])
-    d_ordered[, c(15, 5, 7)]
+    d_ordered[, c(9, 4, 6)]
   })
 
   output$distPlot <- renderPlot({
@@ -439,6 +421,8 @@ server <- function(input, output) {
     )
     axis(1, at = seq(0, max(f$duree, na.rm = TRUE) + 20, by = 20))
     axis(2, at = seq(0, max(h$counts) + 5, by = 5))
+  }, height = function() {
+    session$clientData$output_distPlot_width * 0.75
   })
 
   # output$culturalBudgetToCloseEqPlot <- renderPlot({
@@ -453,6 +437,12 @@ server <- function(input, output) {
     createBarplotCulturalEq(input)
   })
 
+  output$generalStatsPlot <- renderPlot({
+    req(input$map_background_bounds)
+    bounds <- extractBoundsCoords(input$map_background, "map_background", input$map_background_bounds)
+    createBarplotCulturalEq(input, bounds)
+  })
+
   print("Server update done!")
 
   output$map_background <- renderLeaflet({
@@ -464,31 +454,10 @@ server <- function(input, output) {
 }
 
 
-fetchDBColor <- function(input) {
-  north_lat <- input$color_map$north
-  south_lat <- input$color_map$south
-  leafletProxy("color_map") %>%
-    clearMarkers() %>%
-    clearShapes() %>%
-    clearGlLayers()
+updateColorMap <- function(input) {
 
-  df <- data.frame(c(input$color_map_bounds$west, input$color_map_bounds$east), c(input$color_map_bounds$north, input$color_map_bounds$south))
-  colnames(df) <- c("X", "Y")
-
-  data_sf_orig <- st_as_sf(
-    df,
-    coords = c("X", "Y"),
-    crs = 4326
-  )
-
-  data_sf_3035 <- st_transform(data_sf_orig, 3035)
-
-  coords_3035 <- st_coordinates(data_sf_3035)
-  x_min <- min(coords_3035[, 1])
-  x_max <- max(coords_3035[, 1])
-  y_min <- min(coords_3035[, 2])
-  y_max <- max(coords_3035[, 2])
-
+  req(input$color_map_bounds)
+  bounds <- extractBoundsCoords(input$color_map, "color_map", input$color_map_bounds)
   max_fetch <- input$slider
 
   eq <- input$selectedEquipementColorMap
@@ -498,10 +467,10 @@ fetchDBColor <- function(input) {
   }
   equipment_type <- dbQuoteString(conn, paste0(eq, "%"))
 
-  incProgress(0.2, detail = "Querying Database")
-  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", x_min, x_max, y_min, y_max, equipment_type, max_fetch))
+  incProgress(0.2, detail = "Requête à la base de données")
+  res <- dbSendQuery(conn, sprintf("SELECT * FROM equipment_access WHERE \"X\" >= %.0f AND \"X\" <= %.0f AND \"Y\" >= %.0f AND \"Y\" <= %.0f AND \"typeeq_id\" LIKE %s LIMIT %.0f", bounds[1], bounds[2], bounds[3], bounds[4], equipment_type, max_fetch))
 
-  incProgress(0.4, detail = "Processing Data")
+  incProgress(0.4, detail = "Traitement des données")
   f <- dbFetch(res)
 
   if (nrow(f) == 0) {
@@ -514,7 +483,7 @@ fetchDBColor <- function(input) {
   data_sf_4326 <- dbCoordsToLeaflet(f)
 
 
-  incProgress(0.3, detail = "Rendering Map")
+  incProgress(0.3, detail = "Rendu de la carte")
 
   polys_sfc <- create_rect_polys(data_sf_4326)
 
@@ -527,7 +496,6 @@ fetchDBColor <- function(input) {
       vals <- data_sf_4326$Label
       scale <- input$colorMapScale
 
-      # Vectorized replacement for cascading ifs
       color_vec[vals < scale[5]] <- "purple"
       color_vec[vals < scale[4]] <- "red"
       color_vec[vals < scale[3]] <- "orange"
