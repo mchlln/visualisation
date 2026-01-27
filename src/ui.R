@@ -122,7 +122,7 @@ ui <- page_sidebar(
           ),
           noUiSliderInput(
             inputId = "colorMapScale",
-            label = "Sélectionner:",
+            label = "Échelle de couleur (en Km):",
             min = 0,
             max = 150,
             value = c(10, 20, 50, 100, 125),
@@ -138,7 +138,7 @@ ui <- page_sidebar(
             col_widths = c(1, 1),
             actionButton(
               inputId = "color_update",
-              label = "Mettre à jour les couleurs",
+              label = "Mettre à jour la carte",
               width = "100%"
             )
           ),
